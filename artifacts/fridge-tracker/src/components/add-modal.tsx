@@ -29,7 +29,9 @@ export function AddModal() {
     const tutorialHandler = (event: Event) => {
       const action = (event as CustomEvent<string>).detail;
       if (action === "add") setTutorialActive(true);
-      if (action === "product-created" || action === "add-closed") setTutorialActive(false);
+      if (action === "product-created" || action === "add-closed" || action === "tour-finished") {
+        setTutorialActive(false);
+      }
     };
     document.addEventListener("open-add-modal", handler);
     document.addEventListener("close-add-modal", closeHandler);
@@ -51,7 +53,18 @@ export function AddModal() {
     setPrefillName(name);
     setPrefillLocation(loc);
     setView("manual");
-  }, []);
+    if (tutorialActive) signalTourAction("add-method-chosen");
+  }, [tutorialActive]);
+
+  const selectView = (nextView: View) => {
+    setView(nextView);
+    if (tutorialActive) signalTourAction("add-method-chosen");
+  };
+
+  const returnToMenu = () => {
+    setView("menu");
+    if (tutorialActive) signalTourAction("add-menu");
+  };
 
   return (
     <Drawer
@@ -73,31 +86,35 @@ export function AddModal() {
         <DrawerTitle className="sr-only">Item toevoegen</DrawerTitle>
         <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
 
-        {tutorialActive && (
+        {tutorialActive && view !== "menu" && (
           <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
             <p className="font-semibold text-sm text-foreground">Voeg je eerste product toe</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Kies hieronder een manier. Deze uitleg blijft staan terwijl je je product toevoegt.
+              Volg deze stappen en sla je product op. Daarna gaan we verder met je voorraad.
             </p>
           </div>
         )}
 
         {view === "menu" && (
-          <MenuView onScan={() => setView("scan")} onManual={() => goToManual()} onBarcode={() => setView("barcode")} />
+          <MenuView
+            onScan={() => selectView("scan")}
+            onManual={() => goToManual()}
+            onBarcode={() => selectView("barcode")}
+          />
         )}
         {view === "manual" && (
           <ManualAddFlow
             onClose={resetAndClose}
-            onBack={() => setView("menu")}
+            onBack={returnToMenu}
             prefillName={prefillName}
             prefillLocation={prefillLocation}
           />
         )}
         {view === "scan" && (
-          <ScanReceiptFlow onClose={resetAndClose} onBack={() => setView("menu")} />
+          <ScanReceiptFlow onClose={resetAndClose} onBack={returnToMenu} />
         )}
         {view === "barcode" && (
-          <BarcodeFlow onClose={resetAndClose} onBack={() => setView("menu")} onFound={goToManual} />
+          <BarcodeFlow onClose={resetAndClose} onBack={returnToMenu} onFound={goToManual} />
         )}
       </DrawerContent>
     </Drawer>
@@ -114,9 +131,10 @@ function MenuView({
   onBarcode: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <>
       <h2 className="text-2xl font-bold text-card-foreground mb-4">Toevoegen aan voorraad</h2>
 
+      <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300" data-tour="add-methods">
       <button
         onClick={onScan}
         className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
@@ -158,6 +176,7 @@ function MenuView({
         </div>
         <ChevronRight className="h-5 w-5 text-muted-foreground" />
       </button>
+      </div>
     </div>
   );
 }

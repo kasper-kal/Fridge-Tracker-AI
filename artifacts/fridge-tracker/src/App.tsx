@@ -52,7 +52,7 @@ function Router() {
 function AppInner() {
   const { isBanned, isRegistered } = useUser();
 
-  const [phase, setPhase] = useState<"none" | "story" | "add" | "adding" | "swipe" | "setup" | "done">(() => {
+  const [phase, setPhase] = useState<"none" | "story" | "add" | "add-options" | "adding" | "swipe" | "setup" | "done">(() => {
     if (!hasSeenOnboarding()) return "story";
     if (!localStorage.getItem(TOUR_SEEN_KEY)) return "add";
     return "none";
@@ -67,9 +67,11 @@ function AppInner() {
   useEffect(() => {
     const handleTourAction = (event: Event) => {
       const action = (event as CustomEvent<string>).detail;
-      if (action === "add" && phase === "add") setPhase("adding");
-      if (action === "product-created" && phase === "adding") setPhase("swipe");
-      if (action === "add-closed" && phase === "adding") setPhase("setup");
+      if (action === "add" && phase === "add") setPhase("add-options");
+      if (action === "add-method-chosen" && phase === "add-options") setPhase("adding");
+      if (action === "add-menu" && phase === "adding") setPhase("add-options");
+      if (action === "product-created" && (phase === "adding" || phase === "add-options")) setPhase("swipe");
+      if (action === "add-closed" && (phase === "adding" || phase === "add-options")) setPhase("setup");
     };
     document.addEventListener("tour-action", handleTourAction);
     return () => document.removeEventListener("tour-action", handleTourAction);
@@ -77,6 +79,7 @@ function AppInner() {
 
   const finishTour = () => {
     localStorage.setItem(TOUR_SEEN_KEY, "1");
+    document.dispatchEvent(new CustomEvent("tour-action", { detail: "tour-finished" }));
     setPhase("setup");
   };
 
@@ -97,7 +100,7 @@ function AppInner() {
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
       </WouterRouter>
-      {phase !== "story" && phase !== "add" && phase !== "adding" && phase !== "swipe" && <UndoRedoBar />}
+      {phase !== "story" && phase !== "add" && phase !== "add-options" && phase !== "adding" && phase !== "swipe" && <UndoRedoBar />}
       <Toaster position="top-center" />
       {phase === "done" && <CookieBanner />}
       <DeveloperPanel />
@@ -111,6 +114,7 @@ function AppInner() {
       )}
 
       {phase === "add" && <TourOverlay mode="add" onDone={finishTour} />}
+      {phase === "add-options" && <TourOverlay mode="add-options" onDone={finishTour} />}
       {phase === "swipe" && <TourOverlay mode="swipe" onDone={finishTour} />}
 
       {phase === "setup" && (

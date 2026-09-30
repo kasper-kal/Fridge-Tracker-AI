@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 
 export const TOUR_SEEN_KEY = "fridge_tour_seen";
-export type TourAction = "add" | "product-created" | "swipe" | "add-closed";
+export type TourAction =
+  | "add"
+  | "add-method-chosen"
+  | "add-menu"
+  | "product-created"
+  | "swipe"
+  | "add-closed"
+  | "tour-finished";
 
 export function signalTourAction(action: TourAction) {
   document.dispatchEvent(new CustomEvent("tour-action", { detail: action }));
@@ -27,6 +34,17 @@ const STEPS = [
   },
 ];
 
+const ADD_OPTIONS_STEP = {
+  target: '[data-tour="add-methods"]',
+  action: "add-method-chosen" as TourAction,
+  title: "Kies hoe je wilt toevoegen",
+  description: "Scan een bon, scan een barcode of vul het product handmatig in. Je kunt hieronder direct een optie kiezen.",
+  pad: 8,
+  tooltipBelow: false,
+};
+
+type TourMode = "add" | "add-options" | "swipe";
+
 interface Rect {
   x: number;
   y: number;
@@ -51,11 +69,15 @@ function measure(selector: string, pad: number): Rect | null {
   };
 }
 
-export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: "add" | "swipe" }) {
+export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMode }) {
   const [rect, setRect] = useState<Rect | null>(null);
   const [visible, setVisible] = useState(false);
 
-  const current = mode === "add" ? STEPS[0] : STEPS[1];
+  const current = mode === "add"
+    ? STEPS[0]
+    : mode === "add-options"
+      ? ADD_OPTIONS_STEP
+      : STEPS[1];
 
   useEffect(() => {
     setVisible(false);
@@ -67,15 +89,19 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: "add" 
       }
     };
     run();
-    const t = setTimeout(run, 150);
-    return () => clearTimeout(t);
+    const timers = [150, 350, 650].map((delay) => window.setTimeout(run, delay));
+    window.addEventListener("resize", run);
+    return () => {
+      timers.forEach(window.clearTimeout);
+      window.removeEventListener("resize", run);
+    };
   }, [mode, current.target, current.pad]);
 
   useEffect(() => {
     const handleAction = (event: Event) => {
       const action = (event as CustomEvent<TourAction>).detail;
       if (action !== current.action) return;
-      if (mode === "add") return;
+      if (mode !== "swipe") return;
       onDone();
     };
     document.addEventListener("tour-action", handleAction);
@@ -139,7 +165,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: "add" 
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                  (mode === "add" && i === 0) || (mode === "swipe" && i === 1)
+                  (mode !== "swipe" && i === 0) || (mode === "swipe" && i === 1)
                     ? "w-6 bg-primary"
                     : i < (mode === "swipe" ? 1 : 0)
                       ? "w-1.5 bg-primary/35"
@@ -150,7 +176,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: "add" 
           </div>
 
           <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
-            {mode === "add" ? "Eerst dit" : "Daarna dit"}
+            {mode === "swipe" ? "Daarna dit" : "Eerst dit"}
           </p>
           <h3 className="font-bold text-lg text-foreground mb-1.5">{current.title}</h3>
           <p className="text-sm text-muted-foreground leading-relaxed mb-4">{current.description}</p>
@@ -163,7 +189,11 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: "add" 
               Overslaan
             </button>
             <p className="text-sm font-semibold text-primary text-right">
-              {mode === "add" ? "Voeg je eerste product toe" : "Veeg naar links om verder te gaan"}
+              {mode === "add"
+                ? "Voeg je eerste product toe"
+                : mode === "add-options"
+                  ? "Kies een manier om door te gaan"
+                  : "Veeg naar links om verder te gaan"}
             </p>
           </div>
         </div>
