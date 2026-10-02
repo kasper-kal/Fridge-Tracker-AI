@@ -135,49 +135,49 @@ function MenuView({
       <h2 className="text-2xl font-bold text-card-foreground mb-4">Toevoegen aan voorraad</h2>
 
       <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300" data-tour="add-methods">
-      <button
-        onClick={onScan}
-        className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
-      >
-        <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-          <Camera className="h-6 w-6" />
-        </div>
-        <div className="flex-1 text-left">
-          <div className="font-semibold text-lg text-card-foreground">Bon scannen</div>
-          <div className="text-sm text-muted-foreground">Items automatisch detecteren met AI</div>
-        </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-      </button>
+        <button
+          onClick={onScan}
+          className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
+        >
+          <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+            <Camera className="h-6 w-6" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="font-semibold text-lg text-card-foreground">Bon scannen</div>
+            <div className="text-sm text-muted-foreground">Items automatisch detecteren met AI</div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </button>
 
-      <button
-        onClick={onBarcode}
-        className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
-      >
-        <div className="h-12 w-12 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-          <Barcode className="h-6 w-6" />
-        </div>
-        <div className="flex-1 text-left">
-          <div className="font-semibold text-lg text-card-foreground">Barcode scannen</div>
-          <div className="text-sm text-muted-foreground">Scan een product via de camera</div>
-        </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-      </button>
+        <button
+          onClick={onBarcode}
+          className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
+        >
+          <div className="h-12 w-12 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+            <Barcode className="h-6 w-6" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="font-semibold text-lg text-card-foreground">Barcode scannen</div>
+            <div className="text-sm text-muted-foreground">Scan een product via de camera</div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </button>
 
-      <button
-        onClick={onManual}
-        className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
-      >
-        <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-          <PenLine className="h-6 w-6" />
-        </div>
-        <div className="flex-1 text-left">
-          <div className="font-semibold text-lg text-card-foreground">Handmatig toevoegen</div>
-          <div className="text-sm text-muted-foreground">Vul zelf de details in</div>
-        </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-      </button>
+        <button
+          onClick={onManual}
+          className="flex items-center p-5 bg-secondary/30 hover:bg-secondary/50 rounded-2xl transition-all group"
+        >
+          <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+            <PenLine className="h-6 w-6" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="font-semibold text-lg text-card-foreground">Handmatig toevoegen</div>
+            <div className="text-sm text-muted-foreground">Vul zelf de details in</div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </button>
       </div>
-    </div>
+    </>
   );
 }
 

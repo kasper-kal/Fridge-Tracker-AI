@@ -113,8 +113,9 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
   const tooltipAbove =
     !current.tooltipBelow || rect.y + rect.h > window.innerHeight * 0.58;
 
+  const tooltipGap = mode === "add-options" ? 6 : 20;
   const tooltipStyle = tooltipAbove
-    ? { bottom: window.innerHeight - rect.y + 20 }
+    ? { bottom: window.innerHeight - rect.y + tooltipGap }
     : { top: rect.y + rect.h + 20 };
 
   return (
@@ -192,7 +193,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
               {mode === "add"
                 ? "Voeg je eerste product toe"
                 : mode === "add-options"
-                  ? "Kies een manier om door te gaan"
+                  ? "Kies een optie"
                   : "Veeg naar links om verder te gaan"}
             </p>
           </div>

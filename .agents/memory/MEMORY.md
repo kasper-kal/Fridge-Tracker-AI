@@ -1,1 +1,1 @@
-- [Onboarding in drawers](onboarding-drawers.md) — keep guidance inside portal-based drawers and advance only after the requested action completes.
+- [Onboarding in drawers](onboarding-drawers.md) — retain the chooser spotlight, keep guidance through entry, and advance only after save.
