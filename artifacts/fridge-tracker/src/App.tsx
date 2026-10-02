@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +15,8 @@ import { CookieBanner } from "@/components/cookie-banner";
 import { UserSetupModal } from "@/components/user-setup-modal";
 import { BannedScreen } from "@/components/banned-screen";
 import { DeveloperPanel } from "@/components/developer-panel";
-import { TourOverlay, TOUR_SEEN_KEY } from "@/components/tour";
+import { TourOverlay, TOUR_SEEN_KEY, signalTourAction } from "@/components/tour";
+import type { TourActionDetail } from "@/components/tour";
 import NotFound from "@/pages/not-found";
 import FridgePage from "@/pages/fridge";
 import FreezerPage from "@/pages/freezer";
@@ -49,6 +50,30 @@ function Router() {
   );
 }
 
+function TourNavigation({ active }: { active: boolean }) {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const handleProductCreated = (event: Event) => {
+      const { action, storageLocation } =
+        (event as CustomEvent<TourActionDetail>).detail;
+      if (!active || action !== "product-created" || !storageLocation) return;
+
+      const pathByLocation = {
+        fridge: "/",
+        freezer: "/freezer",
+        pantry: "/pantry",
+      };
+      setLocation(pathByLocation[storageLocation]);
+    };
+
+    document.addEventListener("tour-action", handleProductCreated);
+    return () => document.removeEventListener("tour-action", handleProductCreated);
+  }, [active, setLocation]);
+
+  return null;
+}
+
 function AppInner() {
   const { isBanned, isRegistered } = useUser();
 
@@ -68,12 +93,12 @@ function AppInner() {
 
   useEffect(() => {
     const handleTourAction = (event: Event) => {
-      const action = (event as CustomEvent<string>).detail;
+      const { action } = (event as CustomEvent<TourActionDetail>).detail;
       if (action === "add" && phase === "add") setPhase("add-options");
       if (action === "add-method-chosen" && phase === "add-options") setPhase("adding");
       if (action === "add-menu" && phase === "adding") setPhase("add-options");
       if (action === "product-created" && (phase === "adding" || phase === "add-options")) setPhase("swipe");
-      if (action === "add-closed" && (phase === "adding" || phase === "add-options")) setPhase("setup");
+      if (action === "add-closed" && (phase === "adding" || phase === "add-options")) setPhase("add");
     };
     document.addEventListener("tour-action", handleTourAction);
     return () => document.removeEventListener("tour-action", handleTourAction);
@@ -81,7 +106,7 @@ function AppInner() {
 
   const finishTour = () => {
     localStorage.setItem(TOUR_SEEN_KEY, "1");
-    document.dispatchEvent(new CustomEvent("tour-action", { detail: "tour-finished" }));
+    signalTourAction("tour-finished");
     setPhase("setup");
   };
 
@@ -101,6 +126,7 @@ function AppInner() {
     <>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
+        <TourNavigation active={phase === "adding" || phase === "add-options"} />
       </WouterRouter>
       {phase !== "story" && phase !== "add" && phase !== "add-options" && phase !== "adding" && phase !== "swipe" && phase !== "setup" && <UndoRedoBar />}
       <Toaster position="top-center" />
@@ -112,6 +138,7 @@ function AppInner() {
           onDone={() => {
             setPhase("add");
           }}
+          onSkip={finishTour}
         />
       )}
 

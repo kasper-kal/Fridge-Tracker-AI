@@ -148,6 +148,7 @@ export function ProductList({ products, emptyIcon, emptyTitle, emptyMessage, acc
           {filtered.map((product, i) => (
             <div
               key={product.id}
+              data-tour={i === 0 ? "swipe-target" : undefined}
               className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
               style={{ animationDelay: `${i * 40}ms`, animationDuration: "350ms" }}
             >

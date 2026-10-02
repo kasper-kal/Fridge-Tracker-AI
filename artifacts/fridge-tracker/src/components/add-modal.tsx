@@ -27,9 +27,12 @@ export function AddModal() {
     const handler = () => setOpen(true);
     const closeHandler = () => resetAndClose();
     const tutorialHandler = (event: Event) => {
-      const action = (event as CustomEvent<string>).detail;
+      const { action } = (event as CustomEvent<{ action: string }>).detail;
       if (action === "add") setTutorialActive(true);
-      if (action === "product-created" || action === "add-closed" || action === "tour-finished") {
+      if (action === "tour-finished") {
+        setTutorialActive(false);
+        resetAndClose(true);
+      } else if (action === "product-created" || action === "add-closed") {
         setTutorialActive(false);
       }
     };
@@ -80,6 +83,8 @@ export function AddModal() {
       <DrawerTrigger asChild>
         <Button
           size="icon"
+          aria-label="Product toevoegen"
+          title="Product toevoegen"
           className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
         >
           <Plus className="h-7 w-7" />
@@ -105,7 +110,11 @@ export function AddModal() {
           />
         )}
         {view === "scan" && (
-          <ScanReceiptFlow onClose={resetAndClose} onBack={returnToMenu} />
+          <ScanReceiptFlow
+            onClose={resetAndClose}
+            onBack={returnToMenu}
+            onManual={() => goToManual()}
+          />
         )}
         {view === "barcode" && (
           <BarcodeFlow onClose={resetAndClose} onBack={returnToMenu} onFound={goToManual} />
@@ -311,7 +320,7 @@ function ManualAddFlow({
     });
     setSaving(false);
     toast.success(`${name.trim()} toegevoegd aan ${locationLabel}`);
-    signalTourAction("product-created");
+    signalTourAction("product-created", { storageLocation: location });
     onClose(true);
   };
 
@@ -417,9 +426,18 @@ function ManualAddFlow({
   );
 }
 
-function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: boolean) => void; onBack: () => void }) {
+function ScanReceiptFlow({
+  onClose,
+  onBack,
+  onManual,
+}: {
+  onClose: (tutorialCompleted?: boolean) => void;
+  onBack: () => void;
+  onManual: () => void;
+}) {
   const [step, setStep] = useState<"upload" | "ocr" | "api" | "confirm">("upload");
   const [ocrProgress, setOcrProgress] = useState(0);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [parsedItems, setParsedItems] = useState<
     { name: string; quantity: number; unit: string; location: "fridge" | "freezer" | "pantry" }[]
   >([]);
@@ -431,6 +449,7 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
   const parseMutation = useParseReceipt();
 
   const processFile = async (file: File) => {
+    setScanError(null);
     setStep("ocr");
     setOcrProgress(0);
     try {
@@ -442,8 +461,11 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
 
       const ocrText = result.data.text.trim();
       if (!ocrText) {
-        toast.error("Geen tekst gevonden in de afbeelding. Probeer een duidelijkere foto.");
+        const message = "Geen tekst gevonden. Maak een scherpere foto of voeg de producten handmatig toe.";
+        setScanError(message);
+        toast.error(message);
         setStep("upload");
+        signalTourAction("add-target-changed");
         return;
       }
 
@@ -456,10 +478,14 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
         location: "fridge" as const,
       })));
       setStep("confirm");
+      signalTourAction("add-target-changed");
     } catch (err) {
       console.error(err);
-      toast.error("Verwerken van bon mislukt. Probeer het opnieuw.");
+      const message = "De bon kon niet worden gelezen. Probeer opnieuw of voeg de producten handmatig toe.";
+      setScanError(message);
+      toast.error(message);
       setStep("upload");
+      signalTourAction("add-target-changed");
     }
   };
 
@@ -485,7 +511,9 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
     const names = parsedItems.slice(0, 2).map(i => i.name).join(", ");
     const extra = parsedItems.length > 2 ? ` en ${parsedItems.length - 2} meer` : "";
     toast.success(`${names}${extra} toegevoegd`);
-    signalTourAction("product-created");
+    signalTourAction("product-created", {
+      storageLocation: parsedItems[0]?.location ?? "fridge",
+    });
     onClose(true);
   };
 
@@ -528,6 +556,11 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
                 Tekst wordt lokaal uitgelezen. Alleen de tekst wordt naar AI gestuurd — nooit de afbeelding.
               </p>
             </div>
+            {scanError && (
+              <div role="alert" className="w-full max-w-xs rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-center text-sm text-foreground">
+                {scanError}
+              </div>
+            )}
             <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleCameraChange} />
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
             <div className="flex flex-col gap-3 w-full max-w-xs">
@@ -536,6 +569,9 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
               </Button>
               <Button size="lg" variant="outline" className="w-full h-14 rounded-2xl text-base font-bold" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="w-5 h-5 mr-2" /> Uploaden van apparaat
+              </Button>
+              <Button size="lg" variant="ghost" className="w-full" onClick={onManual}>
+                Lukt scannen niet? Handmatig invoeren
               </Button>
             </div>
           </div>
@@ -563,7 +599,13 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
             {parsedItems.length === 0 ? (
               <div className="text-center py-12 space-y-3">
                 <p className="text-muted-foreground">Er zijn geen items gedetecteerd.</p>
-                <Button variant="outline" onClick={() => setStep("upload")}>Opnieuw proberen</Button>
+                <p className="text-sm text-muted-foreground">Je kunt een nieuwe foto proberen of de producten zelf invoeren.</p>
+                <div className="mx-auto flex w-full max-w-xs flex-col gap-2">
+                  <Button variant="outline" onClick={() => { setScanError(null); setStep("upload"); }}>
+                    Bon opnieuw proberen
+                  </Button>
+                  <Button variant="ghost" onClick={onManual}>Handmatig invoeren</Button>
+                </div>
               </div>
             ) : (
               parsedItems.map((item, i) => (

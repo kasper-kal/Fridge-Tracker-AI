@@ -28,19 +28,29 @@ const slides = [
     eyebrow: "De oplossing",
     title: "Koelkast Tracker weet het voor je.",
     body: "Altijd precies zien wat je thuis hebt \u2014 nooit meer dubbele boodschappen of lege koelkast momenten.",
-    cta: "Open de app \u2192",
+    cta: "Start de rondleiding",
   },
 ];
 
-export function OnboardingSlides({ onDone }: { onDone: () => void }) {
+export function OnboardingSlides({
+  onDone,
+  onSkip,
+}: {
+  onDone: () => void;
+  onSkip: () => void;
+}) {
   const [index, setIndex] = useState(0);
 
   const current = slides[index];
   const isLast = index === slides.length - 1;
 
+  const markSeen = () => {
+    localStorage.setItem(STORY_KEY, "1");
+  };
+
   const next = () => {
     if (isLast) {
-      localStorage.setItem(STORY_KEY, "1");
+      markSeen();
       onDone();
     } else {
       setIndex(1);
@@ -48,13 +58,17 @@ export function OnboardingSlides({ onDone }: { onDone: () => void }) {
   };
 
   const skip = () => {
-    localStorage.setItem(STORY_KEY, "1");
-    onDone();
+    markSeen();
+    onSkip();
   };
 
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/[.78] p-4 backdrop-blur-sm sm:p-6">
-      <OnboardingCard step={index + 1}>
+      <OnboardingCard
+        step={index + 1}
+        totalSteps={slides.length}
+        progressLabel="Introductie"
+      >
         <div className="flex flex-col items-center text-center">
           <div className={`mb-4 flex h-20 w-20 items-center justify-center rounded-3xl ${current.iconBg}`}>
             {current.icon}
@@ -83,7 +97,15 @@ export function OnboardingSlides({ onDone }: { onDone: () => void }) {
               onClick={skip}
               className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Overslaan
+              Rondleiding overslaan
+            </button>
+          )}
+          {isLast && (
+            <button
+              onClick={skip}
+              className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Rondleiding overslaan
             </button>
           )}
         </div>

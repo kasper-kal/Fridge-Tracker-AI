@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { OnboardingCard } from "@/components/onboarding-card";
 
 export const TOUR_SEEN_KEY = "fridge_tour_seen";
+export const TOUR_STEP_COUNT = 4;
 export type TourAction =
   | "add"
   | "add-method-chosen"
@@ -12,35 +13,36 @@ export type TourAction =
   | "add-closed"
   | "tour-finished";
 
-export function signalTourAction(action: TourAction) {
-  document.dispatchEvent(new CustomEvent("tour-action", { detail: action }));
+export interface TourActionDetail {
+  action: TourAction;
+  storageLocation?: "fridge" | "freezer" | "pantry";
 }
 
-const STEPS = [
-  {
-    target: '[data-tour="add-button"]',
-    action: "add" as TourAction,
-    title: "Producten toevoegen",
-    description: "Tik op de + knop. Voeg daarna zelf een product toe; dat wordt meteen je eerste echte product.",
-    pad: 18,
-    tooltipBelow: false,
-  },
-  {
-    target: '[data-tour="product-list"]',
-    action: "swipe" as TourAction,
-    title: "Probeer een veegactie",
-    description:
-      "Veeg je nieuwe product naar links om de beschikbare acties te zien.",
-    pad: 12,
-    tooltipBelow: false,
-  },
-];
+export function signalTourAction(
+  action: TourAction,
+  payload: Omit<TourActionDetail, "action"> = {},
+) {
+  document.dispatchEvent(
+    new CustomEvent<TourActionDetail>("tour-action", {
+      detail: { action, ...payload },
+    }),
+  );
+}
+
+const ADD_STEP = {
+  target: '[data-tour="add-button"]',
+  action: "add" as TourAction,
+  title: "Voeg een product toe",
+  description: "Tik op de + knop onderaan. Je kunt een bon scannen, een barcode scannen of alles handmatig invullen.",
+  pad: 18,
+  tooltipBelow: false,
+};
 
 const ADD_OPTIONS_STEP = {
   target: '[data-tour="add-methods"]',
   action: "add-method-chosen" as TourAction,
   title: "Kies hoe je wilt toevoegen",
-  description: "Scan een bon, scan een barcode of vul het product handmatig in. Je kunt hieronder direct een optie kiezen.",
+  description: "Bon scannen, barcode scannen of handmatig toevoegen. Handmatig invoeren werkt altijd als scannen niet lukt.",
   pad: 8,
   tooltipBelow: false,
 };
@@ -49,12 +51,20 @@ const ADD_CONTENT_STEP = {
   target: '[data-tour="add-active-content"]',
   action: "product-created" as TourAction,
   title: "Voeg je eerste product toe",
-  description: "Sla je eerste product op. Daarna gaan we verder met je voorraad.",
+  description: "Scannen is optioneel. Lukt de bon- of barcodeherkenning niet, kies dan Handmatig toevoegen. Sla minstens één product op om verder te gaan.",
   pad: 8,
   tooltipBelow: false,
 };
 
 type TourMode = "add" | "add-options" | "add-content" | "swipe";
+const SWIPE_STEP = {
+  target: '[data-tour="swipe-target"]',
+  action: "swipe" as TourAction,
+  title: "Probeer een veegactie",
+  description: "Veeg het gemarkeerde product naar links om de beschikbare acties te zien.",
+  pad: 8,
+  tooltipBelow: false,
+};
 
 interface Rect {
   x: number;
@@ -83,46 +93,99 @@ function measure(selector: string, pad: number): Rect | null {
 export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMode }) {
   const [rect, setRect] = useState<Rect | null>(null);
   const [visible, setVisible] = useState(false);
+  const [hasMeasured, setHasMeasured] = useState(false);
+  const [targetFound, setTargetFound] = useState(false);
+  const [targetInView, setTargetInView] = useState(false);
   const [tooltipTop, setTooltipTop] = useState(16);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const current = mode === "add"
-    ? STEPS[0]
+    ? ADD_STEP
     : mode === "add-options"
       ? ADD_OPTIONS_STEP
       : mode === "add-content"
         ? ADD_CONTENT_STEP
-        : STEPS[1];
+        : SWIPE_STEP;
   const compactTooltip = mode === "add-options" || mode === "add-content";
   const onboardingStep =
-    mode === "add" ? 3 : mode === "add-options" ? 4 : mode === "add-content" ? 5 : 6;
+    mode === "add" ? 1 : mode === "add-options" ? 2 : mode === "add-content" ? 3 : 4;
 
   useEffect(() => {
     setVisible(false);
+    setHasMeasured(false);
     const run = () => {
-      const r = measure(current.target, current.pad);
-      if (r) {
-        setRect(r);
-        requestAnimationFrame(() => setVisible(true));
+      const target = document.querySelector(current.target);
+      const nextRect = target ? measure(current.target, current.pad) : null;
+      setHasMeasured(true);
+      setTargetFound(!!nextRect);
+      setRect((previous) => {
+        if (
+          previous &&
+          nextRect &&
+          previous.x === nextRect.x &&
+          previous.y === nextRect.y &&
+          previous.w === nextRect.w &&
+          previous.h === nextRect.h
+        ) {
+          return previous;
+        }
+        return nextRect;
+      });
+
+      if (!target || !nextRect) {
+        setTargetInView(false);
+        setVisible(true);
+        return;
       }
+      const bounds = target.getBoundingClientRect();
+      setTargetInView(
+        bounds.bottom > 0 &&
+          bounds.top < window.innerHeight &&
+          bounds.right > 0 &&
+          bounds.left < window.innerWidth,
+      );
+      requestAnimationFrame(() => setVisible(true));
     };
     run();
     const timers = [150, 350, 650].map((delay) => window.setTimeout(run, delay));
-    window.addEventListener("resize", run);
+    let frame = 0;
+    const scheduleRun = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(run);
+    };
+    const resizeObserver = new ResizeObserver(scheduleRun);
+    const observeTarget = () => {
+      resizeObserver.disconnect();
+      const target = document.querySelector(current.target);
+      if (target) resizeObserver.observe(target);
+      scheduleRun();
+    };
+    const mutationObserver = new MutationObserver(observeTarget);
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("resize", scheduleRun);
+    window.addEventListener("scroll", scheduleRun, true);
     return () => {
       timers.forEach(window.clearTimeout);
-      window.removeEventListener("resize", run);
+      if (frame) cancelAnimationFrame(frame);
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", scheduleRun);
+      window.removeEventListener("scroll", scheduleRun, true);
     };
   }, [mode, current.target, current.pad]);
 
   useLayoutEffect(() => {
-    if (!rect) return;
+    if (!hasMeasured) return;
 
     const positionTooltip = () => {
       const cardHeight = tooltipRef.current?.getBoundingClientRect().height;
       if (!cardHeight) return;
 
       const margin = 16;
+      if (!targetInView || !rect) {
+        setTooltipTop(Math.max(margin, (window.innerHeight - cardHeight) / 2));
+        return;
+      }
       const gap = compactTooltip ? 6 : 20;
       const availableAbove = rect.y - margin;
       const availableBelow = window.innerHeight - (rect.y + rect.h) - margin;
@@ -160,7 +223,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       observer.disconnect();
       window.removeEventListener("resize", positionTooltip);
     };
-  }, [compactTooltip, current.tooltipBelow, rect]);
+  }, [compactTooltip, current.tooltipBelow, hasMeasured, rect, targetInView]);
 
   useEffect(() => {
     const pendingRefreshes: number[] = [];
@@ -168,11 +231,12 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       const r = measure(current.target, current.pad);
       if (r) {
         setRect(r);
+        setTargetFound(true);
         requestAnimationFrame(() => setVisible(true));
       }
     };
     const handleAction = (event: Event) => {
-      const action = (event as CustomEvent<TourAction>).detail;
+      const { action } = (event as CustomEvent<TourActionDetail>).detail;
       if (action === "add-target-changed" && mode === "add-content") {
         [150, 350, 650].forEach((delay) => {
           pendingRefreshes.push(window.setTimeout(refreshTarget, delay));
@@ -190,41 +254,43 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
     };
   }, [current.action, mode, onDone]);
 
-  if (!rect) return null;
+  if (!hasMeasured) return null;
 
   return (
     <>
-      {/* SVG spotlight overlay */}
-      <div
-        className={`fixed inset-0 z-[60] pointer-events-none transition-opacity duration-300 ${
-          visible ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
-          <defs>
-            <mask id="tour-mask">
-              <rect width="100%" height="100%" fill="white" />
-              <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={rect.r} fill="black" />
-            </mask>
-          </defs>
-          <rect width="100%" height="100%" fill="rgba(0,0,0,0.78)" mask="url(#tour-mask)" />
-        </svg>
-      </div>
+      {targetInView && rect && (
+        <>
+          <div
+            className={`fixed inset-0 z-[60] pointer-events-none transition-opacity duration-300 ${
+              visible ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+              <defs>
+                <mask id="tour-mask">
+                  <rect width="100%" height="100%" fill="white" />
+                  <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={rect.r} fill="black" />
+                </mask>
+              </defs>
+              <rect width="100%" height="100%" fill="rgba(0,0,0,0.78)" mask="url(#tour-mask)" />
+            </svg>
+          </div>
 
-      {/* Pulsing ring around target */}
-      <div
-        className={`fixed z-[61] pointer-events-none border-2 border-white/90 transition-all duration-300 ${
-          visible ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          left: rect.x,
-          top: rect.y,
-          width: rect.w,
-          height: rect.h,
-          borderRadius: rect.r,
-          animation: "tour-pulse 2s ease-in-out infinite",
-        }}
-      />
+          <div
+            className={`fixed z-[61] pointer-events-none border-2 border-white/90 transition-all duration-300 ${
+              visible ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              left: rect.x,
+              top: rect.y,
+              width: rect.w,
+              height: rect.h,
+              borderRadius: rect.r,
+              animation: "tour-pulse 2s ease-in-out infinite",
+            }}
+          />
+        </>
+      )}
 
       {/* Tooltip card */}
       <div
@@ -234,27 +300,42 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
         }`}
         style={{ top: tooltipTop }}
       >
-        <OnboardingCard step={onboardingStep} compact={compactTooltip}>
+        <OnboardingCard
+          step={onboardingStep}
+          totalSteps={TOUR_STEP_COUNT}
+          progressLabel="Rondleiding"
+          compact={compactTooltip}
+        >
           <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
             {mode === "swipe" ? "Daarna dit" : "Eerst dit"}
           </p>
           <h3 className="font-bold text-lg text-foreground mb-1.5">{current.title}</h3>
           <p className="text-sm text-muted-foreground leading-relaxed mb-4">{current.description}</p>
+          {!targetFound && (
+            <p role="status" className="mb-4 rounded-xl bg-secondary/50 p-3 text-sm text-muted-foreground">
+              Dit onderdeel is hier niet zichtbaar. Je kunt de app blijven gebruiken of de rondleiding overslaan.
+            </p>
+          )}
+          {targetFound && !targetInView && mode === "swipe" && (
+            <p role="status" className="mb-4 rounded-xl bg-secondary/50 p-3 text-sm text-muted-foreground">
+              Het product staat buiten beeld. Scroll naar het gemarkeerde product; deze uitleg blijft zichtbaar.
+            </p>
+          )}
 
           <div className="flex items-center justify-between">
             <button
               onClick={onDone}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Overslaan
+              {mode === "swipe" ? "Verder zonder veegactie" : "Rondleiding overslaan"}
             </button>
             <p className="text-sm font-semibold text-primary text-right">
               {mode === "add"
-                ? "Voeg je eerste product toe"
+                ? "Tik op +"
                 : mode === "add-options"
-                  ? "Kies een optie"
+                  ? "Kies een invoermethode"
                   : mode === "add-content"
-                    ? "Sla op om door te gaan"
+                    ? "Voeg minstens één product toe"
                     : "Veeg naar links om verder te gaan"}
             </p>
           </div>

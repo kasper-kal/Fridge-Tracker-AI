@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Refrigerator, User } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { toast } from "sonner";
-import { OnboardingCard, ONBOARDING_TOTAL_STEPS } from "@/components/onboarding-card";
+import { OnboardingCard } from "@/components/onboarding-card";
 
 export function UserSetupModal() {
   const { isRegistered, register } = useUser();
@@ -26,12 +26,12 @@ export function UserSetupModal() {
 
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/[.78] p-4 backdrop-blur-sm sm:p-6">
-      <OnboardingCard step={ONBOARDING_TOTAL_STEPS}>
+      <OnboardingCard>
         <div className="flex flex-col items-center text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10">
             <Refrigerator className="h-7 w-7 text-primary" />
           </div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">Laatste stap</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">Account instellen</p>
           <h2 className="text-2xl font-bold text-foreground">Welkom!</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Kies een gebruikersnaam om aan de slag te gaan met je koelkast tracker.
