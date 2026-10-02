@@ -1,10 +1,10 @@
 ---
-name: Onboarding in drawers
-description: Interaction rule for tutorial steps that open modal drawers or other portal-based surfaces.
+name: Immersive onboarding
+description: Visual and interaction rules for every onboarding stage, including story, add flow, swipe, and account setup.
 ---
 
-For the add-method chooser, keep the immersive full-screen spotlight and highlight the usable choices. Once a method opens, keep a concise instruction inside the drawer while the user completes it. Do not treat opening a menu as completing the step.
+Use the same dimmed full-screen backdrop, floating card, progress indicator, and spotlight treatment across every onboarding stage: story slides, add prompt, method chooser, active add method, swipe tutorial, and username setup. Spotlight the current action while keeping its controls usable.
 
-**Why:** The user prefers the spotlight-and-floating-card treatment from the first onboarding screen, while still needing guidance in the add flow and direct access to its controls.
+**Why:** The user explicitly asked for the immersive experience on every onboarding step, not only the add flow.
 
-**How to apply:** Spotlight the drawer's choice group from the page-level overlay, then show the active step's short instruction inside later drawer views. Advance only from a successful save; closing without saving must not mark the step complete.
+**How to apply:** Keep progress consistent across the full sequence. Spotlight the drawer's choices, active form or scanner, and swipe target; keep the floating card on-screen and preserve usable inputs and buttons. Advance past product entry only after a successful save; closing without saving must not mark it complete.

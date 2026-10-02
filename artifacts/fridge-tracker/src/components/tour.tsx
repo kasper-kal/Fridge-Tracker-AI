@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { OnboardingCard } from "@/components/onboarding-card";
 
 export const TOUR_SEEN_KEY = "fridge_tour_seen";
 export type TourAction =
   | "add"
   | "add-method-chosen"
   | "add-menu"
+  | "add-target-changed"
   | "product-created"
   | "swipe"
   | "add-closed"
@@ -43,7 +45,16 @@ const ADD_OPTIONS_STEP = {
   tooltipBelow: false,
 };
 
-type TourMode = "add" | "add-options" | "swipe";
+const ADD_CONTENT_STEP = {
+  target: '[data-tour="add-active-content"]',
+  action: "product-created" as TourAction,
+  title: "Voeg je eerste product toe",
+  description: "Sla je eerste product op. Daarna gaan we verder met je voorraad.",
+  pad: 8,
+  tooltipBelow: false,
+};
+
+type TourMode = "add" | "add-options" | "add-content" | "swipe";
 
 interface Rect {
   x: number;
@@ -72,12 +83,19 @@ function measure(selector: string, pad: number): Rect | null {
 export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMode }) {
   const [rect, setRect] = useState<Rect | null>(null);
   const [visible, setVisible] = useState(false);
+  const [tooltipTop, setTooltipTop] = useState(16);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const current = mode === "add"
     ? STEPS[0]
     : mode === "add-options"
       ? ADD_OPTIONS_STEP
-      : STEPS[1];
+      : mode === "add-content"
+        ? ADD_CONTENT_STEP
+        : STEPS[1];
+  const compactTooltip = mode === "add-options" || mode === "add-content";
+  const onboardingStep =
+    mode === "add" ? 3 : mode === "add-options" ? 4 : mode === "add-content" ? 5 : 6;
 
   useEffect(() => {
     setVisible(false);
@@ -97,26 +115,82 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
     };
   }, [mode, current.target, current.pad]);
 
+  useLayoutEffect(() => {
+    if (!rect) return;
+
+    const positionTooltip = () => {
+      const cardHeight = tooltipRef.current?.getBoundingClientRect().height;
+      if (!cardHeight) return;
+
+      const margin = 16;
+      const gap = compactTooltip ? 6 : 20;
+      const availableAbove = rect.y - margin;
+      const availableBelow = window.innerHeight - (rect.y + rect.h) - margin;
+      const fitsAbove = availableAbove >= cardHeight + gap;
+      const fitsBelow = availableBelow >= cardHeight + gap;
+
+      let top: number;
+      if (!current.tooltipBelow && fitsAbove) {
+        top = rect.y - cardHeight - gap;
+      } else if (current.tooltipBelow && fitsBelow) {
+        top = rect.y + rect.h + gap;
+      } else if (fitsAbove) {
+        top = rect.y - cardHeight - gap;
+      } else if (fitsBelow) {
+        top = rect.y + rect.h + gap;
+      } else {
+        const idealTop =
+          availableAbove >= availableBelow
+            ? rect.y - cardHeight - gap
+            : rect.y + rect.h + gap;
+        top = Math.min(
+          window.innerHeight - cardHeight - margin,
+          Math.max(margin, idealTop),
+        );
+      }
+
+      setTooltipTop(top);
+    };
+
+    positionTooltip();
+    const observer = new ResizeObserver(positionTooltip);
+    if (tooltipRef.current) observer.observe(tooltipRef.current);
+    window.addEventListener("resize", positionTooltip);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", positionTooltip);
+    };
+  }, [compactTooltip, current.tooltipBelow, rect]);
+
   useEffect(() => {
+    const pendingRefreshes: number[] = [];
+    const refreshTarget = () => {
+      const r = measure(current.target, current.pad);
+      if (r) {
+        setRect(r);
+        requestAnimationFrame(() => setVisible(true));
+      }
+    };
     const handleAction = (event: Event) => {
       const action = (event as CustomEvent<TourAction>).detail;
+      if (action === "add-target-changed" && mode === "add-content") {
+        [150, 350, 650].forEach((delay) => {
+          pendingRefreshes.push(window.setTimeout(refreshTarget, delay));
+        });
+        return;
+      }
       if (action !== current.action) return;
       if (mode !== "swipe") return;
       onDone();
     };
     document.addEventListener("tour-action", handleAction);
-    return () => document.removeEventListener("tour-action", handleAction);
+    return () => {
+      document.removeEventListener("tour-action", handleAction);
+      pendingRefreshes.forEach(window.clearTimeout);
+    };
   }, [current.action, mode, onDone]);
 
   if (!rect) return null;
-
-  const tooltipAbove =
-    !current.tooltipBelow || rect.y + rect.h > window.innerHeight * 0.58;
-
-  const tooltipGap = mode === "add-options" ? 6 : 20;
-  const tooltipStyle = tooltipAbove
-    ? { bottom: window.innerHeight - rect.y + tooltipGap }
-    : { top: rect.y + rect.h + 20 };
 
   return (
     <>
@@ -154,28 +228,13 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
 
       {/* Tooltip card */}
       <div
+        ref={tooltipRef}
         className={`fixed z-[62] left-4 right-4 pointer-events-auto transition-all duration-300 ${
           visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
         }`}
-        style={tooltipStyle}
+        style={{ top: tooltipTop }}
       >
-        <div className="bg-card rounded-3xl p-5 shadow-2xl border border-border max-w-[360px] mx-auto">
-          {/* Progress */}
-            <div className="flex gap-1.5 mb-4">
-            {STEPS.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  (mode !== "swipe" && i === 0) || (mode === "swipe" && i === 1)
-                    ? "w-6 bg-primary"
-                    : i < (mode === "swipe" ? 1 : 0)
-                      ? "w-1.5 bg-primary/35"
-                      : "w-1.5 bg-border"
-                }`}
-              />
-            ))}
-          </div>
-
+        <OnboardingCard step={onboardingStep} compact={compactTooltip}>
           <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
             {mode === "swipe" ? "Daarna dit" : "Eerst dit"}
           </p>
@@ -194,10 +253,12 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
                 ? "Voeg je eerste product toe"
                 : mode === "add-options"
                   ? "Kies een optie"
-                  : "Veeg naar links om verder te gaan"}
+                  : mode === "add-content"
+                    ? "Sla op om door te gaan"
+                    : "Veeg naar links om verder te gaan"}
             </p>
           </div>
-        </div>
+        </OnboardingCard>
       </div>
 
       <style>{`

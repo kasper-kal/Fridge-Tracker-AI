@@ -1,1 +1,1 @@
-- [Onboarding in drawers](onboarding-drawers.md) — retain the chooser spotlight, keep guidance through entry, and advance only after save.
+- [Immersive onboarding](onboarding-drawers.md) — use one spotlight, floating-card, and progress language across every onboarding stage.

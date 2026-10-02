@@ -53,7 +53,10 @@ export function AddModal() {
     setPrefillName(name);
     setPrefillLocation(loc);
     setView("manual");
-    if (tutorialActive) signalTourAction("add-method-chosen");
+    if (tutorialActive) {
+      signalTourAction("add-method-chosen");
+      signalTourAction("add-target-changed");
+    }
   }, [tutorialActive]);
 
   const selectView = (nextView: View) => {
@@ -85,15 +88,6 @@ export function AddModal() {
       <DrawerContent className="bg-card px-6 pb-safe pt-2 border-t border-card-border rounded-t-3xl h-[85vh] max-h-[800px] outline-none">
         <DrawerTitle className="sr-only">Item toevoegen</DrawerTitle>
         <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
-
-        {tutorialActive && view !== "menu" && (
-          <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
-            <p className="font-semibold text-sm text-foreground">Voeg je eerste product toe</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Volg deze stappen en sla je product op. Daarna gaan we verder met je voorraad.
-            </p>
-          </div>
-        )}
 
         {view === "menu" && (
           <MenuView
@@ -199,6 +193,7 @@ function BarcodeFlow({
     setScanning(false);
     setLooking(true);
     setBarcode(code);
+    signalTourAction("add-target-changed");
 
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`);
@@ -214,9 +209,11 @@ function BarcodeFlow({
         onFound(productName, "fridge");
       } else {
         setNotFound(true);
+        signalTourAction("add-target-changed");
       }
     } catch {
       setNotFound(true);
+      signalTourAction("add-target-changed");
     } finally {
       setLooking(false);
     }
@@ -240,7 +237,7 @@ function BarcodeFlow({
         )}
 
         {looking && (
-          <div className="flex flex-col items-center gap-4 py-8">
+          <div className="flex flex-col items-center gap-4 py-8" data-tour="add-active-content">
             <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center">
               <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
             </div>
@@ -252,7 +249,7 @@ function BarcodeFlow({
         )}
 
         {notFound && (
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <div className="flex flex-col items-center gap-4 py-8 text-center" data-tour="add-active-content">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
               <Barcode className="w-8 h-8 text-muted-foreground" />
             </div>
@@ -261,7 +258,11 @@ function BarcodeFlow({
               <p className="text-sm text-muted-foreground">Barcode: {barcode}</p>
             </div>
             <div className="flex gap-3 w-full max-w-xs">
-              <Button variant="outline" className="flex-1" onClick={() => { setNotFound(false); setScanning(true); }}>
+              <Button variant="outline" className="flex-1" onClick={() => {
+                setNotFound(false);
+                setScanning(true);
+                signalTourAction("add-target-changed");
+              }}>
                 Opnieuw scannen
               </Button>
               <Button className="flex-1" onClick={() => onFound("", "fridge")}>
@@ -326,6 +327,7 @@ function ManualAddFlow({
         </Button>
       </div>
 
+      <div className="flex flex-col flex-1 min-h-0" data-tour="add-active-content">
       <div className="space-y-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium">Productnaam</Label>
@@ -409,6 +411,7 @@ function ManualAddFlow({
           {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
           Item opslaan
         </Button>
+      </div>
       </div>
     </form>
   );
@@ -512,6 +515,7 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
         </Button>
       </div>
 
+      <div className="flex flex-col flex-1 min-h-0" data-tour="add-active-content">
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
         {step === "upload" && (
           <div className="flex flex-col items-center justify-center h-full space-y-6 py-8">
@@ -625,6 +629,7 @@ function ScanReceiptFlow({ onClose, onBack }: { onClose: (tutorialCompleted?: bo
           </Button>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -117,8 +117,11 @@ export function CameraScanner({
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <div className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-black"
-           style={{ aspectRatio: "1 / 1" }}>
+      <div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-black"
+        style={{ aspectRatio: "1 / 1" }}
+        data-tour="add-active-content"
+      >
         <video
           ref={videoRef}
           className="w-full h-full object-cover"

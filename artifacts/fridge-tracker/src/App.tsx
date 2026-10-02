@@ -61,6 +61,8 @@ function AppInner() {
   useEffect(() => {
     if (phase === "none") {
       setPhase(isRegistered ? "done" : "setup");
+    } else if (phase === "setup" && isRegistered) {
+      setPhase("done");
     }
   }, [isRegistered, phase]);
 
@@ -100,7 +102,7 @@ function AppInner() {
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
       </WouterRouter>
-      {phase !== "story" && phase !== "add" && phase !== "add-options" && phase !== "adding" && phase !== "swipe" && <UndoRedoBar />}
+      {phase !== "story" && phase !== "add" && phase !== "add-options" && phase !== "adding" && phase !== "swipe" && phase !== "setup" && <UndoRedoBar />}
       <Toaster position="top-center" />
       {phase === "done" && <CookieBanner />}
       <DeveloperPanel />
@@ -115,6 +117,7 @@ function AppInner() {
 
       {phase === "add" && <TourOverlay mode="add" onDone={finishTour} />}
       {phase === "add-options" && <TourOverlay mode="add-options" onDone={finishTour} />}
+      {phase === "adding" && <TourOverlay mode="add-content" onDone={finishTour} />}
       {phase === "swipe" && <TourOverlay mode="swipe" onDone={finishTour} />}
 
       {phase === "setup" && (

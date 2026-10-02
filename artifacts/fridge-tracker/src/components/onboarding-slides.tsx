@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ShoppingCart, Refrigerator, ChevronRight } from "lucide-react";
+import { OnboardingCard } from "@/components/onboarding-card";
 
 const STORY_KEY = "fridge_onboarding_seen";
 export const ONBOARDING_RESTART_EVENT = "restart-onboarding";
@@ -14,7 +15,6 @@ export function hasSeenOnboarding() {
 
 const slides = [
   {
-    dark: true,
     icon: <ShoppingCart className="w-10 h-10 text-amber-400" />,
     iconBg: "bg-amber-400/15",
     eyebrow: "Herken je dit?",
@@ -23,7 +23,6 @@ const slides = [
     cta: "Volgende",
   },
   {
-    dark: false,
     icon: <Refrigerator className="w-10 h-10 text-primary" />,
     iconBg: "bg-primary/10",
     eyebrow: "De oplossing",
@@ -54,58 +53,41 @@ export function OnboardingSlides({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col transition-all duration-500 ${current.dark ? "bg-slate-950" : "bg-background"}`}>
-      {!isLast && (
-        <div className="flex justify-end px-6 pt-12">
-          <button
-            onClick={skip}
-            className={`text-sm font-medium transition-colors ${
-              current.dark ? "text-white/40 hover:text-white/70" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Overslaan
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-6">
-        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center animate-in zoom-in-75 duration-500 ${current.iconBg}`}>
-          {current.icon}
-        </div>
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
-          <p className={`text-xs font-semibold uppercase tracking-[0.15em] ${current.dark ? "text-amber-400" : "text-primary"}`}>
+    <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/[.78] p-4 backdrop-blur-sm sm:p-6">
+      <OnboardingCard step={index + 1}>
+        <div className="flex flex-col items-center text-center">
+          <div className={`mb-4 flex h-20 w-20 items-center justify-center rounded-3xl ${current.iconBg}`}>
+            {current.icon}
+          </div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
             {current.eyebrow}
           </p>
-          <h1 className={`text-3xl font-bold leading-tight ${current.dark ? "text-white" : "text-foreground"}`}>
+          <h1 className="text-3xl font-bold leading-tight text-foreground">
             {current.title}
           </h1>
-          <p className={`text-base leading-relaxed max-w-xs mx-auto ${current.dark ? "text-white/55" : "text-muted-foreground"}`}>
+          <p className="mt-3 max-w-xs text-base leading-relaxed text-muted-foreground">
             {current.body}
           </p>
         </div>
-      </div>
 
-      <div className="px-8 pb-16 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200 fill-mode-both">
-        <div className="flex justify-center gap-2">
-          {slides.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 rounded-full transition-all duration-500 ${
-                i === index ? (current.dark ? "w-8 bg-white" : "w-8 bg-primary") : current.dark ? "w-2 bg-white/25" : "w-2 bg-border"
-              }`}
-            />
-          ))}
+        <div className="mt-6 space-y-3">
+          <button
+            onClick={next}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 active:scale-[.98]"
+          >
+            {current.cta}
+            {!isLast && <ChevronRight className="h-5 w-5" />}
+          </button>
+          {!isLast && (
+            <button
+              onClick={skip}
+              className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Overslaan
+            </button>
+          )}
         </div>
-        <button
-          onClick={next}
-          className={`w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[.98] ${
-            current.dark ? "bg-white text-slate-950 hover:bg-white/90" : "bg-primary text-primary-foreground hover:brightness-110"
-          }`}
-        >
-          {current.cta}
-          {!isLast && <ChevronRight className="w-5 h-5" />}
-        </button>
-      </div>
+      </OnboardingCard>
     </div>
   );
 }
