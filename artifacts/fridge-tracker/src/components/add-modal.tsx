@@ -57,14 +57,15 @@ export function AddModal() {
     setPrefillLocation(loc);
     setView("manual");
     if (tutorialActive) {
-      signalTourAction("add-method-chosen");
-      signalTourAction("add-target-changed");
+      signalTourAction(name.trim() ? "add-prefilled" : "add-manual-chosen");
     }
   }, [tutorialActive]);
 
   const selectView = (nextView: View) => {
     setView(nextView);
-    if (tutorialActive) signalTourAction("add-method-chosen");
+    if (tutorialActive) {
+      signalTourAction(nextView === "scan" ? "add-receipt-chosen" : "add-barcode-chosen");
+    }
   };
 
   const returnToMenu = () => {
@@ -107,6 +108,7 @@ export function AddModal() {
             onBack={returnToMenu}
             prefillName={prefillName}
             prefillLocation={prefillLocation}
+            tutorialActive={tutorialActive}
           />
         )}
         {view === "scan" && (
@@ -239,14 +241,19 @@ function BarcodeFlow({
 
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         {scanning && (
-          <CameraScanner
-            onResult={handleBarcode}
-            label="Richt op een EAN/UPC barcode op de verpakking"
-          />
+          <>
+            <CameraScanner
+              onResult={handleBarcode}
+              label="Richt op een EAN/UPC barcode op de verpakking"
+            />
+            <Button variant="ghost" className="w-full max-w-sm" onClick={() => onFound("", "fridge")}>
+              Camera werkt niet? Handmatig invoeren
+            </Button>
+          </>
         )}
 
         {looking && (
-          <div className="flex flex-col items-center gap-4 py-8" data-tour="add-active-content">
+          <div className="flex flex-col items-center gap-4 py-8" data-tour="add-scan-action">
             <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center">
               <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
             </div>
@@ -258,7 +265,7 @@ function BarcodeFlow({
         )}
 
         {notFound && (
-          <div className="flex flex-col items-center gap-4 py-8 text-center" data-tour="add-active-content">
+          <div className="flex flex-col items-center gap-4 py-8 text-center" data-tour="add-scan-action">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
               <Barcode className="w-8 h-8 text-muted-foreground" />
             </div>
@@ -290,11 +297,13 @@ function ManualAddFlow({
   onBack,
   prefillName = "",
   prefillLocation = "fridge",
+  tutorialActive,
 }: {
   onClose: (tutorialCompleted?: boolean) => void;
   onBack: () => void;
   prefillName?: string;
   prefillLocation?: StorageLocation;
+  tutorialActive: boolean;
 }) {
   const [name, setName] = useState(prefillName);
   const [quantity, setQuantity] = useState("");
@@ -338,12 +347,18 @@ function ManualAddFlow({
 
       <div className="flex flex-col flex-1 min-h-0" data-tour="add-active-content">
       <div className="space-y-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-        <div className="space-y-2">
+        <div className="space-y-2" data-tour="product-name">
           <Label htmlFor="name" className="text-sm font-medium">Productnaam</Label>
           <Input
             id="name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              const nextName = e.target.value;
+              setName(nextName);
+              if (tutorialActive) {
+                signalTourAction(nextName.trim() ? "add-name-ready" : "add-name-cleared");
+              }
+            }}
             placeholder="bijv. Biologische Melk"
             className="h-12 rounded-xl bg-secondary/20"
             autoFocus
@@ -413,6 +428,7 @@ function ManualAddFlow({
 
       <div className="pt-4 mt-auto">
         <Button
+          data-tour="save-product"
           type="submit"
           disabled={saving}
           className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg"
@@ -478,6 +494,7 @@ function ScanReceiptFlow({
         location: "fridge" as const,
       })));
       setStep("confirm");
+      if (items.length > 0) signalTourAction("add-save-ready");
       signalTourAction("add-target-changed");
     } catch (err) {
       console.error(err);
@@ -563,7 +580,7 @@ function ScanReceiptFlow({
             )}
             <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleCameraChange} />
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-            <div className="flex flex-col gap-3 w-full max-w-xs">
+            <div className="flex flex-col gap-3 w-full max-w-xs" data-tour="add-scan-action">
               <Button size="lg" className="w-full h-14 rounded-2xl text-base font-bold" onClick={() => cameraInputRef.current?.click()}>
                 <Camera className="w-5 h-5 mr-2" /> Foto nemen
               </Button>
@@ -600,7 +617,7 @@ function ScanReceiptFlow({
               <div className="text-center py-12 space-y-3">
                 <p className="text-muted-foreground">Er zijn geen items gedetecteerd.</p>
                 <p className="text-sm text-muted-foreground">Je kunt een nieuwe foto proberen of de producten zelf invoeren.</p>
-                <div className="mx-auto flex w-full max-w-xs flex-col gap-2">
+                <div className="mx-auto flex w-full max-w-xs flex-col gap-2" data-tour="add-scan-action">
                   <Button variant="outline" onClick={() => { setScanError(null); setStep("upload"); }}>
                     Bon opnieuw proberen
                   </Button>
@@ -665,7 +682,12 @@ function ScanReceiptFlow({
 
       {step === "confirm" && parsedItems.length > 0 && (
         <div className="pt-4 mt-auto shrink-0 bg-card border-t -mx-6 px-6 pb-2">
-          <Button className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg" onClick={handleSaveAll} disabled={saving}>
+          <Button
+            data-tour="save-product"
+            className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg"
+            onClick={handleSaveAll}
+            disabled={saving}
+          >
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
             Alle {parsedItems.length} item{parsedItems.length !== 1 ? "s" : ""} opslaan
           </Button>

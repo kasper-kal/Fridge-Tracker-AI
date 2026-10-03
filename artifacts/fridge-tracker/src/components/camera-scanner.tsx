@@ -120,7 +120,7 @@ export function CameraScanner({
       <div
         className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-black"
         style={{ aspectRatio: "1 / 1" }}
-        data-tour="add-active-content"
+        data-tour="add-scan-action"
       >
         <video
           ref={videoRef}

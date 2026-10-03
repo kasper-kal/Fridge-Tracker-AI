@@ -77,7 +77,19 @@ function TourNavigation({ active }: { active: boolean }) {
 function AppInner() {
   const { isBanned, isRegistered } = useUser();
 
-  const [phase, setPhase] = useState<"none" | "story" | "add" | "add-options" | "adding" | "swipe" | "setup" | "done">(() => {
+  const [phase, setPhase] = useState<
+    | "none"
+    | "story"
+    | "add"
+    | "add-options"
+    | "adding-manual"
+    | "adding-receipt"
+    | "adding-barcode"
+    | "add-save"
+    | "swipe"
+    | "setup"
+    | "done"
+  >(() => {
     if (!hasSeenOnboarding()) return "story";
     if (!localStorage.getItem(TOUR_SEEN_KEY)) return "add";
     return "none";
@@ -95,10 +107,39 @@ function AppInner() {
     const handleTourAction = (event: Event) => {
       const { action } = (event as CustomEvent<TourActionDetail>).detail;
       if (action === "add" && phase === "add") setPhase("add-options");
-      if (action === "add-method-chosen" && phase === "add-options") setPhase("adding");
-      if (action === "add-menu" && phase === "adding") setPhase("add-options");
-      if (action === "product-created" && (phase === "adding" || phase === "add-options")) setPhase("swipe");
-      if (action === "add-closed" && (phase === "adding" || phase === "add-options")) setPhase("add");
+      if (action === "add-manual-chosen" && (
+        phase === "add-options" || phase === "adding-receipt" || phase === "adding-barcode"
+      )) setPhase("adding-manual");
+      if (action === "add-receipt-chosen" && phase === "add-options") setPhase("adding-receipt");
+      if (action === "add-barcode-chosen" && phase === "add-options") setPhase("adding-barcode");
+      if (action === "add-prefilled" && (
+        phase === "add-options" || phase === "adding-receipt" || phase === "adding-barcode"
+      )) setPhase("add-save");
+      if (action === "add-name-ready" && phase === "adding-manual") setPhase("add-save");
+      if (action === "add-name-cleared" && phase === "add-save") setPhase("adding-manual");
+      if (action === "add-save-ready" && (
+        phase === "adding-receipt" || phase === "adding-barcode"
+      )) setPhase("add-save");
+      if (action === "add-menu" && (
+        phase === "adding-manual" ||
+        phase === "adding-receipt" ||
+        phase === "adding-barcode" ||
+        phase === "add-save"
+      )) setPhase("add-options");
+      if (action === "product-created" && (
+        phase === "adding-manual" ||
+        phase === "adding-receipt" ||
+        phase === "adding-barcode" ||
+        phase === "add-save" ||
+        phase === "add-options"
+      )) setPhase("swipe");
+      if (action === "add-closed" && (
+        phase === "adding-manual" ||
+        phase === "adding-receipt" ||
+        phase === "adding-barcode" ||
+        phase === "add-save" ||
+        phase === "add-options"
+      )) setPhase("add");
     };
     document.addEventListener("tour-action", handleTourAction);
     return () => document.removeEventListener("tour-action", handleTourAction);
@@ -121,14 +162,33 @@ function AppInner() {
   }, []);
 
   if (isBanned) return <BannedScreen />;
+  const onboardingPhase = [
+    "story",
+    "add",
+    "add-options",
+    "adding-manual",
+    "adding-receipt",
+    "adding-barcode",
+    "add-save",
+    "swipe",
+    "setup",
+  ].includes(phase);
 
   return (
     <>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
-        <TourNavigation active={phase === "adding" || phase === "add-options"} />
+        <TourNavigation
+          active={
+            phase === "add-options" ||
+            phase === "adding-manual" ||
+            phase === "adding-receipt" ||
+            phase === "adding-barcode" ||
+            phase === "add-save"
+          }
+        />
       </WouterRouter>
-      {phase !== "story" && phase !== "add" && phase !== "add-options" && phase !== "adding" && phase !== "swipe" && phase !== "setup" && <UndoRedoBar />}
+      {!onboardingPhase && <UndoRedoBar />}
       <Toaster position="top-center" />
       {phase === "done" && <CookieBanner />}
       <DeveloperPanel />
@@ -144,7 +204,10 @@ function AppInner() {
 
       {phase === "add" && <TourOverlay mode="add" onDone={finishTour} />}
       {phase === "add-options" && <TourOverlay mode="add-options" onDone={finishTour} />}
-      {phase === "adding" && <TourOverlay mode="add-content" onDone={finishTour} />}
+      {phase === "adding-manual" && <TourOverlay mode="add-manual" onDone={finishTour} />}
+      {phase === "adding-receipt" && <TourOverlay mode="add-receipt" onDone={finishTour} />}
+      {phase === "adding-barcode" && <TourOverlay mode="add-barcode" onDone={finishTour} />}
+      {phase === "add-save" && <TourOverlay mode="add-save" onDone={finishTour} />}
       {phase === "swipe" && <TourOverlay mode="swipe" onDone={finishTour} />}
 
       {phase === "setup" && (

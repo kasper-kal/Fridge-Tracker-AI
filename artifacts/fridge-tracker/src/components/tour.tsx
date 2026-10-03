@@ -2,10 +2,16 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { OnboardingCard } from "@/components/onboarding-card";
 
 export const TOUR_SEEN_KEY = "fridge_tour_seen";
-export const TOUR_STEP_COUNT = 4;
+export const TOUR_STEP_COUNT = 5;
 export type TourAction =
   | "add"
-  | "add-method-chosen"
+  | "add-manual-chosen"
+  | "add-receipt-chosen"
+  | "add-barcode-chosen"
+  | "add-prefilled"
+  | "add-name-ready"
+  | "add-name-cleared"
+  | "add-save-ready"
   | "add-menu"
   | "add-target-changed"
   | "product-created"
@@ -40,23 +46,58 @@ const ADD_STEP = {
 
 const ADD_OPTIONS_STEP = {
   target: '[data-tour="add-methods"]',
-  action: "add-method-chosen" as TourAction,
+  action: "add-manual-chosen" as TourAction,
   title: "Kies hoe je wilt toevoegen",
   description: "Bon scannen, barcode scannen of handmatig toevoegen. Handmatig invoeren werkt altijd als scannen niet lukt.",
   pad: 8,
   tooltipBelow: false,
 };
 
-const ADD_CONTENT_STEP = {
-  target: '[data-tour="add-active-content"]',
+const ADD_MANUAL_STEP = {
+  target: '[data-tour="product-name"]',
   action: "product-created" as TourAction,
-  title: "Voeg je eerste product toe",
-  description: "Scannen is optioneel. Lukt de bon- of barcodeherkenning niet, kies dan Handmatig toevoegen. Sla minstens één product op om verder te gaan.",
+  title: "Vul de productnaam in",
+  description: "Begin met de naam. Daarna wijzen we je naar de knop om het product op te slaan.",
   pad: 8,
   tooltipBelow: false,
 };
 
-type TourMode = "add" | "add-options" | "add-content" | "swipe";
+const ADD_RECEIPT_STEP = {
+  target: '[data-tour="add-scan-action"]',
+  action: "product-created" as TourAction,
+  title: "Maak een foto van de bon",
+  description: "Kies Foto nemen of upload een afbeelding. Herkenning mislukt? Kies Handmatig invoeren.",
+  pad: 8,
+  tooltipBelow: false,
+};
+
+const ADD_BARCODE_STEP = {
+  target: '[data-tour="add-scan-action"]',
+  action: "product-created" as TourAction,
+  title: "Scan een barcode",
+  description: "Richt de camera op de barcode. Werkt scannen niet, kies dan Handmatig invoeren.",
+  pad: 8,
+  tooltipBelow: false,
+};
+
+const ADD_SAVE_STEP = {
+  target: '[data-tour="save-product"]',
+  action: "product-created" as TourAction,
+  title: "Sla je product op",
+  description: "Kies eventueel de hoeveelheid en bewaarlocatie. Tik daarna op Item opslaan.",
+  pad: 8,
+  tooltipBelow: false,
+  tooltipTop: true,
+};
+
+type TourMode =
+  | "add"
+  | "add-options"
+  | "add-manual"
+  | "add-receipt"
+  | "add-barcode"
+  | "add-save"
+  | "swipe";
 const SWIPE_STEP = {
   target: '[data-tour="swipe-target"]',
   action: "swipe" as TourAction,
@@ -103,12 +144,31 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
     ? ADD_STEP
     : mode === "add-options"
       ? ADD_OPTIONS_STEP
-      : mode === "add-content"
-        ? ADD_CONTENT_STEP
-        : SWIPE_STEP;
-  const compactTooltip = mode === "add-options" || mode === "add-content";
+      : mode === "add-manual"
+        ? ADD_MANUAL_STEP
+        : mode === "add-receipt"
+          ? ADD_RECEIPT_STEP
+          : mode === "add-barcode"
+            ? ADD_BARCODE_STEP
+            : mode === "add-save"
+              ? ADD_SAVE_STEP
+              : SWIPE_STEP;
+  const compactTooltip =
+    mode === "add-options" ||
+    mode === "add-manual" ||
+    mode === "add-receipt" ||
+    mode === "add-barcode" ||
+    mode === "add-save";
   const onboardingStep =
-    mode === "add" ? 1 : mode === "add-options" ? 2 : mode === "add-content" ? 3 : 4;
+    mode === "add"
+      ? 1
+      : mode === "add-options"
+        ? 2
+        : mode === "add-manual" || mode === "add-receipt" || mode === "add-barcode"
+          ? 3
+          : mode === "add-save"
+            ? 4
+            : 5;
 
   useEffect(() => {
     setVisible(false);
@@ -182,6 +242,10 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       if (!cardHeight) return;
 
       const margin = 16;
+      if (current.tooltipTop) {
+        setTooltipTop(margin);
+        return;
+      }
       if (!targetInView || !rect) {
         setTooltipTop(Math.max(margin, (window.innerHeight - cardHeight) / 2));
         return;
@@ -223,7 +287,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       observer.disconnect();
       window.removeEventListener("resize", positionTooltip);
     };
-  }, [compactTooltip, current.tooltipBelow, hasMeasured, rect, targetInView]);
+  }, [compactTooltip, current.tooltipBelow, current.tooltipTop, hasMeasured, rect, targetInView]);
 
   useEffect(() => {
     const pendingRefreshes: number[] = [];
@@ -232,12 +296,22 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       if (r) {
         setRect(r);
         setTargetFound(true);
+        const target = document.querySelector(current.target);
+        if (target) {
+          const bounds = target.getBoundingClientRect();
+          setTargetInView(
+            bounds.bottom > 0 &&
+              bounds.top < window.innerHeight &&
+              bounds.right > 0 &&
+              bounds.left < window.innerWidth,
+          );
+        }
         requestAnimationFrame(() => setVisible(true));
       }
     };
     const handleAction = (event: Event) => {
       const { action } = (event as CustomEvent<TourActionDetail>).detail;
-      if (action === "add-target-changed" && mode === "add-content") {
+      if (action === "add-target-changed") {
         [150, 350, 650].forEach((delay) => {
           pendingRefreshes.push(window.setTimeout(refreshTarget, delay));
         });
@@ -334,9 +408,15 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
                 ? "Tik op +"
                 : mode === "add-options"
                   ? "Kies een invoermethode"
-                  : mode === "add-content"
-                    ? "Voeg minstens één product toe"
-                    : "Veeg naar links om verder te gaan"}
+                  : mode === "add-manual"
+                    ? "Vul de productnaam in"
+                    : mode === "add-receipt"
+                      ? "Kies een foto of upload"
+                      : mode === "add-barcode"
+                        ? "Richt op de barcode"
+                        : mode === "add-save"
+                          ? "Tik op Item opslaan"
+                          : "Veeg naar links om verder te gaan"}
             </p>
           </div>
         </OnboardingCard>
