@@ -97,7 +97,7 @@ export function OnboardingSlides({
               onClick={skip}
               className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Rondleiding overslaan
+              Intro overslaan
             </button>
           )}
           {isLast && (
@@ -105,7 +105,7 @@ export function OnboardingSlides({
               onClick={skip}
               className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Rondleiding overslaan
+              Intro overslaan
             </button>
           )}
         </div>

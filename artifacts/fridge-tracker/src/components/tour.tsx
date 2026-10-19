@@ -104,7 +104,7 @@ const SWIPE_STEP = {
   title: "Probeer een veegactie",
   description: "Veeg het gemarkeerde product naar links om de beschikbare acties te zien.",
   pad: 8,
-  tooltipBelow: false,
+  tooltipBelow: true,
 };
 
 interface Rect {
@@ -379,7 +379,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       {/* Tooltip card */}
       <div
         ref={tooltipRef}
-        className={`fixed z-[62] left-4 right-4 pointer-events-auto transition-all duration-300 ${
+        className={`fixed z-[62] left-4 right-4 pointer-events-auto transition-[opacity,transform] duration-300 ${
           visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
         }`}
         style={{ top: tooltipTop }}

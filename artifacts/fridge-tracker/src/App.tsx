@@ -198,7 +198,7 @@ function AppInner() {
           onDone={() => {
             setPhase("add");
           }}
-          onSkip={finishTour}
+          onSkip={() => setPhase("add")}
         />
       )}
 

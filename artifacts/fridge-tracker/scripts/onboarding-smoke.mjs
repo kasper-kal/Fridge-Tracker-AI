@@ -267,9 +267,14 @@ try {
   browser = await setupBrowser();
   const { devtools } = browser;
 
-  await click(devtools, "Rondleiding overslaan");
-  await waitFor(devtools, '!!document.querySelector("#setup-username")', "username setup after intro skip");
-  checks.push("intro skip leads to account setup");
+  await click(devtools, "Intro overslaan");
+  await waitForText(devtools, "Tik op +");
+  assert.equal(
+    await devtools.evaluate('!!document.querySelector("#setup-username")'),
+    false,
+    "skipping the intro keeps username setup behind the interactive tour",
+  );
+  checks.push("skipping the intro continues to the add-and-swipe tour before account setup");
 
   await resetToIntro(devtools);
   await startTour(devtools);
@@ -412,13 +417,36 @@ try {
     `!(${visibleText("Het product staat buiten beeld")})`,
     "swipe target back in view",
   );
+  const touchPointHitsTarget = `(() => {
+    const target = document.querySelector('[data-tour="swipe-target"]');
+    const face = document.querySelector('[data-tour="swipe-target"] div[style*="translateX"]');
+    if (!target || !face) return false;
+    const bounds = face.getBoundingClientRect();
+    const hit = document.elementFromPoint(bounds.left + bounds.width * 0.8, bounds.top + bounds.height / 2);
+    return !!hit && target.contains(hit);
+  })()`;
+  await waitFor(devtools, touchPointHitsTarget, "swipe target to be unobstructed by tutorial guidance");
   const touchBounds = await devtools.evaluate(`(() => {
     const card = document.querySelector('[data-tour="swipe-target"] div[style*="translateX"]');
+    const target = document.querySelector('[data-tour="swipe-target"]');
     if (!card) throw new Error("Missing swipeable product face");
     const bounds = card.getBoundingClientRect();
-    return { x: bounds.left + bounds.width * 0.8, y: bounds.top + bounds.height / 2 };
+    const x = bounds.left + bounds.width * 0.8;
+    const y = bounds.top + bounds.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return {
+      x,
+      y,
+      insideTarget: !!hit && !!target?.contains(hit),
+      hit: hit?.outerHTML.slice(0, 180),
+    };
   })()`);
+  assert.equal(touchBounds.insideTarget, true, "the gesture starts on the highlighted product, not the tooltip");
   await devtools.evaluate(`window.__tourActions = [];
+    window.__touchTrace = [];
+    for (const type of ["touchstart", "touchmove", "touchend"]) {
+      document.addEventListener(type, () => window.__touchTrace.push(type), true);
+    }
     document.addEventListener("tour-action", (event) => window.__tourActions.push(event.detail.action));
     true`);
   await devtools.send("Input.dispatchTouchEvent", {
@@ -433,25 +461,50 @@ try {
     type: "touchEnd",
     touchPoints: [],
   });
-  await sleep(300);
+  await waitFor(devtools, 'window.__tourActions.includes("swipe")', "left swipe action", 5000);
+  await waitFor(devtools, '!!document.querySelector("#setup-username")', "setup after touch swipe", 5000);
   const swipeDebug = await devtools.evaluate(`(() => {
     const face = document.querySelector('[data-tour="swipe-target"] div[style*="translateX"]');
     return {
       actions: window.__tourActions,
+      touchTrace: window.__touchTrace,
+      touchPoint: ${JSON.stringify(touchBounds)},
       transform: face?.style.transform,
       bounds: face?.getBoundingClientRect().toJSON(),
+      actionsBounds: document.querySelector('[data-testid="swipe-actions"]')?.getBoundingClientRect().toJSON(),
       setupVisible: !!document.querySelector("#setup-username"),
       tourText: document.querySelector('[role="region"][aria-label^="Rondleiding"]')?.innerText,
     };
   })()`);
-  assert.ok(swipeDebug.actions.includes("swipe"), "a left swipe emits the tour completion action");
-  assert.equal(swipeDebug.transform, "translateX(-272px)", "a left swipe reveals the product actions");
+  assert.ok(
+    swipeDebug.actions.includes("swipe"),
+    `a left swipe emits the tour completion action: ${JSON.stringify(swipeDebug)}`,
+  );
+  assert.equal(
+    Math.abs(Number(swipeDebug.transform.slice("translateX(".length, -3))),
+    swipeDebug.bounds.width,
+    "a left swipe moves the whole product face out of the way",
+  );
+  assert.equal(
+    swipeDebug.actionsBounds.width,
+    swipeDebug.bounds.width,
+    "the action buttons fill the same width as the product card",
+  );
   assert.equal(swipeDebug.setupVisible, true, "the onboarding advances after the swipe");
   await waitFor(devtools, '!!document.querySelector("#setup-username")', "setup after the swipe tour", 10000);
   await devtools.evaluate(setInput("#setup-username", "Onboarding test"));
   await click(devtools, "", { selector: 'button[type="submit"]' });
   await waitFor(devtools, '!document.querySelector("#setup-username")', "app after username setup");
   checks.push("pantry save routes correctly; off-screen tour guidance stays visible; swipe completes onboarding");
+
+  await click(devtools, "", { selector: 'a[href="/account"]' });
+  await waitForText(devtools, "Jouw profiel en instellingen");
+  await click(devtools, "Rondleiding opnieuw starten");
+  await waitForText(devtools, "Herken je dit?");
+  await click(devtools, "Volgende");
+  await click(devtools, "Start de rondleiding");
+  await waitForText(devtools, "Tik op +");
+  checks.push("account settings restart the tutorial from the beginning");
 
   console.log(`Passed ${checks.length} onboarding smoke checks at ${baseUrl}:`);
   for (const check of checks) console.log(`- ${check}`);

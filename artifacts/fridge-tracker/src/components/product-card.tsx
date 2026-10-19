@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useLayoutEffect } from "react";
 import { LocalProduct, useProducts } from "@/context/products-context";
 import { useShoppingList } from "@/context/shopping-list-context";
 import { Trash2, Check, X, Plus, Minus, ShoppingCart, Refrigerator, Snowflake, Package } from "lucide-react";
@@ -10,9 +10,6 @@ import { haptic } from "@/lib/haptics";
 import { signalTourAction } from "@/components/tour";
 
 const SWIPE_THRESHOLD = 60;
-const BTN_W = 68;
-const NUM_BTNS = 4;
-const SWIPE_REVEAL = BTN_W * NUM_BTNS; // 272px
 
 function formatDate(iso: string) {
   try {
@@ -46,6 +43,24 @@ export function ProductCard({ product }: { product: LocalProduct }) {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const dragging    = useRef(false);
+  const cardFaceRef = useRef<HTMLDivElement>(null);
+  const [swipeReveal, setSwipeReveal] = useState(0);
+
+  useLayoutEffect(() => {
+    const face = cardFaceRef.current;
+    if (!face) return;
+
+    const updateRevealWidth = () => {
+      const width = face.getBoundingClientRect().width;
+      setSwipeReveal(width);
+      if (swiped) setSwipeOffset(-width);
+    };
+
+    updateRevealWidth();
+    const observer = new ResizeObserver(updateRevealWidth);
+    observer.observe(face);
+    return () => observer.disconnect();
+  }, [swiped]);
 
   const closeSwipe = () => { setSwiped(false); setSwipeOffset(0); };
 
@@ -118,23 +133,23 @@ export function ProductCard({ product }: { product: LocalProduct }) {
 
     if (dx > 0 && !swiped) return;
 
-    const base   = swiped ? -SWIPE_REVEAL : 0;
-    const offset = Math.min(0, Math.max(-SWIPE_REVEAL, base + dx));
+      const base   = swiped ? -swipeReveal : 0;
+      const offset = Math.min(0, Math.max(-swipeReveal, base + dx));
     setSwipeOffset(offset);
   };
 
   const onTouchEnd = () => {
     if (!dragging.current) return;
     if (swiped) {
-      if (swipeOffset > -(SWIPE_REVEAL - SWIPE_THRESHOLD)) {
+      if (swipeOffset > -(swipeReveal - SWIPE_THRESHOLD)) {
         setSwiped(false); setSwipeOffset(0);
       } else {
-        setSwiped(true); setSwipeOffset(-SWIPE_REVEAL);
+        setSwiped(true); setSwipeOffset(-swipeReveal);
       }
     } else {
       if (swipeOffset < -SWIPE_THRESHOLD) {
         haptic(8);
-        setSwiped(true); setSwipeOffset(-SWIPE_REVEAL);
+        setSwiped(true); setSwipeOffset(-swipeReveal);
         signalTourAction("swipe");
       } else {
         setSwiped(false); setSwipeOffset(0);
@@ -178,15 +193,19 @@ export function ProductCard({ product }: { product: LocalProduct }) {
   }
 
   return (
-    <div className="relative rounded-2xl overflow-hidden select-none">
+    <div
+      className="relative rounded-2xl overflow-hidden select-none"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
 
       {/* Swipe action backdrop — 4 buttons */}
-      <div className="absolute inset-y-0 right-0 flex items-stretch">
+      <div data-testid="swipe-actions" className="absolute inset-0 flex items-stretch">
         {/* 1. Boodschappenlijst */}
         <button
           onClick={handleAddToList}
-          style={{ width: BTN_W }}
-          className="flex flex-col items-center justify-center gap-1 bg-emerald-500 text-white text-[10px] font-semibold active:brightness-90 transition-all"
+          className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 bg-emerald-500 text-white text-[10px] font-semibold active:brightness-90 transition-all"
         >
           <ShoppingCart className="w-5 h-5" />
           Lijst
@@ -198,8 +217,7 @@ export function ProductCard({ product }: { product: LocalProduct }) {
             key={dest}
             onClick={() => handleMove(dest, label)}
             disabled={pending}
-            style={{ width: BTN_W }}
-            className={`flex flex-col items-center justify-center gap-1 ${bg} text-white text-[10px] font-semibold active:brightness-90 transition-all`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 ${bg} text-white text-[10px] font-semibold active:brightness-90 transition-all`}
           >
             <Icon className="w-5 h-5" />
             {label}
@@ -210,8 +228,7 @@ export function ProductCard({ product }: { product: LocalProduct }) {
         <button
           onClick={handleDelete}
           disabled={pending}
-          style={{ width: BTN_W }}
-          className="flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[10px] font-semibold active:brightness-90 transition-all rounded-r-2xl"
+          className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[10px] font-semibold active:brightness-90 transition-all rounded-r-2xl"
         >
           <Trash2 className="w-5 h-5" />
           Verwijder
@@ -220,19 +237,13 @@ export function ProductCard({ product }: { product: LocalProduct }) {
 
       {/* Card face */}
       <div
+        ref={cardFaceRef}
         className="relative bg-card border shadow-sm rounded-2xl flex items-center justify-between"
         style={{
           transform: `translateX(${swipeOffset}px)`,
           transition: dragging.current ? "none" : "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
         }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
-        {swiped && (
-          <div className="absolute inset-0 z-10 rounded-2xl" onClick={closeSwipe} />
-        )}
-
         {/* Name + date — tap to edit */}
         <div
           className="flex-1 min-w-0 py-3.5 pl-4 pr-1 cursor-pointer active:opacity-70 transition-opacity"
