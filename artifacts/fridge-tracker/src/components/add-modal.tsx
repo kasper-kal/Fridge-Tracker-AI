@@ -77,8 +77,11 @@ export function AddModal() {
     <Drawer
       open={open}
       onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-        if (!nextOpen && tutorialActive) signalTourAction("add-closed");
+        if (nextOpen) {
+          setOpen(true);
+          return;
+        }
+        resetAndClose();
       }}
     >
       <DrawerTrigger asChild>

@@ -115,6 +115,16 @@ interface Rect {
   r: number;
 }
 
+interface TourStep {
+  target: string;
+  action: TourAction;
+  title: string;
+  description: string;
+  pad: number;
+  tooltipBelow: boolean;
+  tooltipTop?: boolean;
+}
+
 function measure(selector: string, pad: number): Rect | null {
   const el = document.querySelector(selector);
   if (!el) return null;
@@ -140,7 +150,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
   const [tooltipTop, setTooltipTop] = useState(16);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const current = mode === "add"
+  const current: TourStep = mode === "add"
     ? ADD_STEP
     : mode === "add-options"
       ? ADD_OPTIONS_STEP
