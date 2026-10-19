@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { householdsTable, usersTable } from "@workspace/db";
+import { DeleteCurrentUserHeader } from "@workspace/api-zod";
 import { eq } from "drizzle-orm";
 
 const router = Router();
@@ -80,6 +81,31 @@ router.patch("/me", async (req, res) => {
     res.json(updated);
   } catch {
     res.status(500).json({ error: "Bijwerken mislukt" });
+  }
+});
+
+// DELETE /users/me — remove this device profile without deleting shared inventory
+router.delete("/me", async (req, res) => {
+  const parsedHeader = DeleteCurrentUserHeader.safeParse({
+    "x-device-id": req.headers["x-device-id"],
+  });
+  if (!parsedHeader.success) {
+    res.status(400).json({ error: "Ongeldig apparaat-ID" });
+    return;
+  }
+
+  const deviceId = parsedHeader.data["x-device-id"];
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(householdsTable)
+        .set({ creatorDeviceId: null })
+        .where(eq(householdsTable.creatorDeviceId, deviceId));
+      await tx.delete(usersTable).where(eq(usersTable.deviceId, deviceId));
+    });
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ error: "Resetten mislukt" });
   }
 });
 

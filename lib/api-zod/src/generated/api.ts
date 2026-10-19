@@ -94,6 +94,18 @@ export const GetProductsSummaryResponse = zod.object({
 
 
 /**
+ * @summary Remove the current device profile
+ */
+export const deleteCurrentUserHeaderXDeviceIdMax = 128;
+
+
+
+export const DeleteCurrentUserHeader = zod.object({
+  "x-device-id": zod.string().min(1).max(deleteCurrentUserHeaderXDeviceIdMax)
+})
+
+
+/**
  * @summary Parse OCR text into structured product data using AI
  */
 

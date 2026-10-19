@@ -362,9 +362,14 @@ function ManualAddFlow({
                 signalTourAction(nextName.trim() ? "add-name-ready" : "add-name-cleared");
               }
             }}
+            onBlur={(e) => {
+              if (tutorialActive) {
+                signalTourAction(e.currentTarget.value.trim() ? "add-name-ready" : "add-name-cleared");
+              }
+            }}
             placeholder="bijv. Biologische Melk"
             className="h-12 rounded-xl bg-secondary/20"
-            autoFocus
+            autoFocus={!tutorialActive}
           />
         </div>
 

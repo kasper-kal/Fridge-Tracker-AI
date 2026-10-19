@@ -11,6 +11,8 @@ tags:
     description: Health operations
   - name: products
     description: Inventory product operations
+  - name: users
+    description: User profile operations
   - name: ai
     description: AI parsing operations
 paths:
@@ -118,6 +120,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductsSummary"
+
+  /users/me:
+    delete:
+      operationId: deleteCurrentUser
+      tags: [users]
+      summary: Remove the current device profile
+      parameters:
+        - name: x-device-id
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "204":
+          description: Device profile removed; shared inventory is retained
+        "400":
+          description: Missing or invalid device ID
+        "500":
+          description: Reset failed
 
   /ai/parse-receipt:
     post:

@@ -189,7 +189,7 @@ function AppInner() {
         />
       </WouterRouter>
       {!onboardingPhase && <UndoRedoBar />}
-      <Toaster position="top-center" />
+      {!onboardingPhase && <Toaster position="top-center" />}
       {phase === "done" && <CookieBanner />}
       <DeveloperPanel />
 

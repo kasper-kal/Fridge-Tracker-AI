@@ -24,6 +24,7 @@ interface UserContextValue {
   isBanned: boolean;
   register: (username: string) => Promise<void>;
   updateUsername: (username: string) => Promise<void>;
+  deleteCurrentUserData: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -103,6 +104,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     saveUser(data);
   }, [deviceId, saveUser]);
 
+  const deleteCurrentUserData = useCallback(async () => {
+    const res = await fetch(apiUrl("/api/users/me"), {
+      method: "DELETE",
+      headers: { "x-device-id": deviceId },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? "Resetten mislukt");
+    }
+  }, [deviceId]);
+
   const refresh = useCallback(async () => {
     await fetchUser();
   }, [fetchUser]);
@@ -115,6 +127,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       isBanned: user?.isBanned ?? false,
       register,
       updateUsername,
+      deleteCurrentUserData,
       refresh,
     }}>
       {children}

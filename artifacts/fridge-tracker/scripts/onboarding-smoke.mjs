@@ -84,6 +84,11 @@ const mockApi = `(() => {
         isBanned: false,
       });
     }
+    if (url.pathname.endsWith("/api/users/me") && method === "DELETE") {
+      const headers = new Headers(init.headers);
+      localStorage.setItem("__e2e_deleted_device", headers.get("x-device-id") || "");
+      return new Response(null, { status: 204 });
+    }
     if (url.pathname.endsWith("/api/products") && method === "GET") return json(products);
     if (url.pathname.endsWith("/api/products") && method === "POST") {
       const body = JSON.parse(init.body || "{}");
@@ -181,6 +186,7 @@ async function openManualEntry(devtools) {
 
 async function saveManualProduct(devtools, name, location) {
   await devtools.evaluate(setInput("#name", name));
+  await devtools.evaluate(`document.querySelector("#name")?.blur(); true`);
   await waitForText(devtools, "Rondleiding · 4/5");
   await waitForText(devtools, "Tik op Item opslaan");
   if (location !== "fridge") {
@@ -505,6 +511,36 @@ try {
   await click(devtools, "Start de rondleiding");
   await waitForText(devtools, "Tik op +");
   checks.push("account settings restart the tutorial from the beginning");
+
+  await click(devtools, "Rondleiding overslaan");
+  await waitForText(devtools, "Jouw profiel en instellingen");
+  await devtools.evaluate(`(() => {
+    localStorage.setItem("fridge_e2e_reset_marker", "remove");
+    localStorage.setItem("other_artifact_e2e_marker", "keep");
+    localStorage.setItem("__e2e_old_device", localStorage.getItem("fridge_device_id") || "");
+    return true;
+  })()`);
+  await click(devtools, "", { selector: '[data-testid="reset-device-button"]' });
+  await waitForText(devtools, "Producten en gedeelde boodschappenlijsten blijven bewaard");
+  await click(devtools, "", { selector: '[data-testid="confirm-device-reset"]' });
+  await waitForText(devtools, "Herken je dit?", 10000);
+  const resetResult = await devtools.evaluate(`(() => ({
+    path: location.pathname,
+    oldDeviceId: localStorage.getItem("__e2e_old_device"),
+    deletedDeviceId: localStorage.getItem("__e2e_deleted_device"),
+    newDeviceId: localStorage.getItem("fridge_device_id"),
+    appMarker: localStorage.getItem("fridge_e2e_reset_marker"),
+    otherMarker: localStorage.getItem("other_artifact_e2e_marker"),
+    cachedUser: localStorage.getItem("fridge_user"),
+  }))()`);
+  assert.equal(resetResult.path, "/", "reset returns to the app home page");
+  assert.ok(resetResult.oldDeviceId, "a previous device ID existed");
+  assert.equal(resetResult.deletedDeviceId, resetResult.oldDeviceId, "the server reset request uses the previous device ID");
+  assert.ok(resetResult.newDeviceId && resetResult.newDeviceId !== resetResult.oldDeviceId, "the app starts with a new device ID");
+  assert.equal(resetResult.appMarker, null, "app-local state is cleared");
+  assert.equal(resetResult.otherMarker, "keep", "unrelated same-origin storage is preserved");
+  assert.equal(resetResult.cachedUser, null, "the deleted profile is not restored from cache");
+  checks.push("device reset deletes the profile, clears only app storage, and returns home while preserving shared inventory");
 
   console.log(`Passed ${checks.length} onboarding smoke checks at ${baseUrl}:`);
   for (const check of checks) console.log(`- ${check}`);

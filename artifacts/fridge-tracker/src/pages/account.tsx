@@ -8,20 +8,27 @@ import { toast } from "sonner";
 import { requestOnboardingReplay } from "@/components/onboarding-slides";
 
 export default function AccountPage() {
-  const { user, deviceId, updateUsername } = useUser();
+  const { user, deviceId, updateUsername, deleteCurrentUserData } = useUser();
   const { household, leave } = useHousehold();
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState(user?.username ?? "");
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
-  const handleReset = () => {
-    localStorage.clear();
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
-    });
-    window.location.reload();
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      await deleteCurrentUserData();
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("fridge_")) localStorage.removeItem(key);
+      }
+      window.location.replace(import.meta.env.BASE_URL || "/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Resetten mislukt");
+      setResetting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -194,19 +201,20 @@ export default function AccountPage() {
         {!confirmReset ? (
           <button
             onClick={() => setConfirmReset(true)}
+            data-testid="reset-device-button"
             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-border text-muted-foreground hover:bg-secondary/30 transition-colors text-sm font-medium"
           >
             <RotateCcw className="w-4 h-4" />
-            App resetten
+            Apparaat resetten
           </button>
         ) : (
           <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <p className="text-sm font-medium">App volledig resetten?</p>
+              <p className="text-sm font-medium">Dit apparaat resetten?</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Dit wist <strong>alles</strong>: je account, alle producten, je huishouden, cookie-instellingen en onboardinggeschiedenis. De app start daarna opnieuw op alsof hij nooit is gebruikt.
+              Je profiel, apparaat-ID en lokale app-voorkeuren worden verwijderd. Producten en gedeelde boodschappenlijsten blijven bewaard. Als dit apparaat een huishouden heeft gemaakt, blijft dat huishouden bestaan maar wordt de maker-koppeling verwijderd.
             </p>
             <div className="flex gap-2">
               <button
@@ -217,9 +225,11 @@ export default function AccountPage() {
               </button>
               <button
                 onClick={handleReset}
-                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
+                data-testid="confirm-device-reset"
+                disabled={resetting}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-60 transition-colors"
               >
-                Alles wissen
+                {resetting ? "Bezig met resetten…" : "Reset dit apparaat"}
               </button>
             </div>
           </div>
