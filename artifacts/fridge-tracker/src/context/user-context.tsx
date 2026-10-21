@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useUser as useClerkUser } from "@clerk/react";
 
 const DEVICE_KEY = "fridge_device_id";
 const USER_KEY = "fridge_user";
@@ -15,11 +16,15 @@ export interface UserRecord {
   isBanned: boolean;
   ipAddress?: string | null;
   createdAt?: string;
+  householdId?: number | null;
+  householdName?: string | null;
+  householdIsCreator?: boolean;
 }
 
 interface UserContextValue {
   deviceId: string;
   user: UserRecord | null;
+  isLoading: boolean;
   isRegistered: boolean;
   isBanned: boolean;
   register: (username: string) => Promise<void>;
@@ -47,39 +52,74 @@ function readCachedUser(): UserRecord | null {
 }
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [deviceId] = useState<string>(getOrCreateDeviceId);
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useClerkUser();
+  const [deviceId, setDeviceId] = useState<string>(getOrCreateDeviceId);
   const [user, setUserState] = useState<UserRecord | null>(readCachedUser);
+  const [isLoading, setIsLoading] = useState(true);
 
   const saveUser = useCallback((u: UserRecord) => {
+    if (u.deviceId) {
+      setDeviceId((current) => {
+        if (current !== u.deviceId) localStorage.setItem(DEVICE_KEY, u.deviceId);
+        return u.deviceId;
+      });
+    }
     setUserState(u);
     localStorage.setItem(USER_KEY, JSON.stringify(u));
   }, []);
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch(apiUrl("/api/users"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId }),
-      });
-      if (res.ok) {
+      const cachedUser = readCachedUser();
+      const res = clerkUser?.id
+        ? await fetch(apiUrl("/api/users/me"), {
+            headers: { "x-device-id": deviceId },
+            credentials: "include",
+          })
+        : cachedUser
+          ? await fetch(apiUrl("/api/users"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ deviceId, username: cachedUser.username }),
+            })
+          : null;
+
+      if (res?.ok) {
         const data = await res.json();
         saveUser(data);
+        return;
+      }
+
+      if (clerkUser?.id && res?.status === 404 && cachedUser) {
+        const linkResponse = await fetch(apiUrl("/api/users"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ deviceId, username: cachedUser.username }),
+        });
+        if (linkResponse.ok) {
+          saveUser(await linkResponse.json());
+        }
       }
     } catch { /* offline */ }
-  }, [deviceId, saveUser]);
+  }, [clerkUser?.id, deviceId, saveUser]);
 
-  // Always refresh on mount to get latest ban status
   useEffect(() => {
-    if (readCachedUser()) {
-      fetchUser();
-    }
-  }, []);
+    if (!isClerkLoaded) return;
+    let active = true;
+    setIsLoading(true);
+    void fetchUser().finally(() => {
+      if (active) setIsLoading(false);
+    });
+    return () => { active = false; };
+  }, [fetchUser, isClerkLoaded]);
 
   const register = useCallback(async (username: string) => {
     const res = await fetch(apiUrl("/api/users"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ deviceId, username }),
     });
     if (!res.ok) {
@@ -94,6 +134,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const res = await fetch(apiUrl("/api/users/me"), {
       method: "PATCH",
       headers: { "Content-Type": "application/json", "x-device-id": deviceId },
+      credentials: "include",
       body: JSON.stringify({ username }),
     });
     if (!res.ok) {
@@ -108,6 +149,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const res = await fetch(apiUrl("/api/users/me"), {
       method: "DELETE",
       headers: { "x-device-id": deviceId },
+      credentials: "include",
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -123,6 +165,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     <UserContext.Provider value={{
       deviceId,
       user,
+      isLoading,
       isRegistered: !!user,
       isBanned: user?.isBanned ?? false,
       register,

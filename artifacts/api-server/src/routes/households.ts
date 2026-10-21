@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { householdsTable } from "@workspace/db";
+import { householdsTable, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { createHash } from "crypto";
+import { isAppAdmin, requireAdmin } from "../middlewares/admin";
 
 const router = Router();
-
-const ADMIN_KEY = "dev-admin-065728";
 
 function hashPin(pin: string) {
   return createHash("sha256").update(pin.trim()).digest("hex");
@@ -26,7 +25,7 @@ function parseBody(body: unknown): { name: string; pin: string; deviceId?: strin
 }
 
 // GET /households — list all (admin)
-router.get("/", async (_req, res) => {
+router.get("/", requireAdmin, async (_req, res) => {
   try {
     const all = await db
       .select({ id: householdsTable.id, name: householdsTable.name, createdAt: householdsTable.createdAt, creatorDeviceId: householdsTable.creatorDeviceId })
@@ -59,6 +58,12 @@ router.post("/", async (req, res) => {
       .insert(householdsTable)
       .values({ name: body.name, pinHash: hashPin(body.pin), creatorDeviceId: body.deviceId ?? null })
       .returning();
+    if (body.deviceId) {
+      await db
+        .update(usersTable)
+        .set({ householdId: household.id })
+        .where(eq(usersTable.deviceId, body.deviceId));
+    }
 
     res.status(201).json({ id: household.id, name: household.name, isCreator: true });
   } catch {
@@ -83,6 +88,12 @@ router.post("/join", async (req, res) => {
       return;
     }
 
+    if (body.deviceId) {
+      await db
+        .update(usersTable)
+        .set({ householdId: household.id })
+        .where(eq(usersTable.deviceId, body.deviceId));
+    }
     const isCreator = !!body.deviceId && household.creatorDeviceId === body.deviceId;
     res.json({ id: household.id, name: household.name, isCreator });
   } catch {
@@ -97,18 +108,23 @@ router.delete("/:id", async (req, res) => {
     if (!id) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
     const deviceId = req.headers["x-device-id"] as string | undefined;
-    const adminKey = req.headers["x-admin-key"] as string | undefined;
-    const isAdmin = adminKey === ADMIN_KEY;
 
     const [household] = await db.select().from(householdsTable).where(eq(householdsTable.id, id)).limit(1);
     if (!household) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
+    const isAdmin = await isAppAdmin(req);
     if (!isAdmin && household.creatorDeviceId !== deviceId) {
       res.status(403).json({ error: "Alleen de maker kan dit huishouden verwijderen" });
       return;
     }
 
-    await db.delete(householdsTable).where(eq(householdsTable.id, id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(usersTable)
+        .set({ householdId: null })
+        .where(eq(usersTable.householdId, id));
+      await tx.delete(householdsTable).where(eq(householdsTable.id, id));
+    });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Verwijderen mislukt" });

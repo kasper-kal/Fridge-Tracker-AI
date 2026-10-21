@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useUser as useClerkUser } from "@clerk/react";
 import { X, Trash2, Shield, ShieldOff, Home, Users, Palette, ChevronLeft, Delete, RotateCcw } from "lucide-react";
 import { useTheme } from "@/context/theme-context";
 import { toast } from "sonner";
 
 const ADMIN_PIN = "065728";
-const ADMIN_KEY = "dev-admin-065728";
 const SCROLL_THRESHOLD = 10;
 
 const DEFAULT_PRIMARY   = "220 68% 35%";
@@ -117,7 +117,12 @@ function PinScreen({ onSuccess, onClose }: { onSuccess: () => void; onClose: () 
   );
 }
 
-function BanConfirmModal({ username, onConfirm, onCancel }: { username: string; onConfirm: () => void; onCancel: () => void }) {
+function BanConfirmModal({ username, isBanned, onConfirm, onCancel }: {
+  username: string;
+  isBanned: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 px-6">
       <div className="bg-card rounded-3xl p-6 space-y-4 w-full max-w-sm shadow-2xl">
@@ -125,17 +130,52 @@ function BanConfirmModal({ username, onConfirm, onCancel }: { username: string; 
           <ShieldOff className="w-6 h-6 text-destructive" />
         </div>
         <div className="text-center space-y-1">
-          <p className="text-lg font-bold text-foreground">Gebruiker bannen?</p>
+          <p className="text-lg font-bold text-foreground">
+            {isBanned ? "Ban opheffen?" : "Gebruiker bannen?"}
+          </p>
           <p className="text-sm text-muted-foreground">
-            Weet je zeker dat je <span className="font-semibold text-foreground">{username}</span> wilt bannen? De gebruiker krijgt direct geen toegang meer tot de app.
+            {isBanned
+              ? <>Wil je de ban van <span className="font-semibold text-foreground">{username}</span> opheffen?</>
+              : <>Weet je zeker dat je <span className="font-semibold text-foreground">{username}</span> wilt bannen? De gebruiker krijgt direct geen toegang meer tot de app.</>}
           </p>
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 py-3 rounded-2xl border border-border text-sm font-semibold text-foreground hover:bg-secondary/50 transition-colors">
             Annuleren
           </button>
+          <button onClick={onConfirm} className={`flex-1 py-3 rounded-2xl text-white text-sm font-semibold transition-colors ${isBanned ? "bg-primary hover:bg-primary/90" : "bg-destructive hover:bg-destructive/90"}`}>
+            {isBanned ? "Ban opheffen" : "Ja, bannen"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteUserConfirmModal({ username, onConfirm, onCancel }: {
+  username: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 px-6">
+      <div className="bg-card rounded-3xl p-6 space-y-4 w-full max-w-sm shadow-2xl">
+        <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+          <Trash2 className="w-6 h-6 text-destructive" />
+        </div>
+        <div className="text-center space-y-2">
+          <p className="text-lg font-bold text-foreground">Account definitief verwijderen?</p>
+          <p className="text-sm text-muted-foreground">
+            Het profiel en de inloggegevens van <span className="font-semibold text-foreground">{username}</span> worden verwijderd. Gedeelde producten, boodschappenlijsten en het huishouden blijven bestaan.
+          </p>
+          <p className="text-xs font-medium text-destructive">Dit kan niet ongedaan worden gemaakt.</p>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-3 rounded-2xl border border-border text-sm font-semibold text-foreground hover:bg-secondary/50 transition-colors">
+            Annuleren
+          </button>
           <button onClick={onConfirm} className="flex-1 py-3 rounded-2xl bg-destructive text-white text-sm font-semibold hover:bg-destructive/90 transition-colors">
-            Ja, bannen
+            Definitief verwijderen
           </button>
         </div>
       </div>
@@ -152,16 +192,20 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
   const [secondaryHex, setSecondaryHex] = useState(() => hslStringToHex(secondaryColor));
   const [savingColors, setSavingColors] = useState(false);
   const [confirmBanUser, setConfirmBanUser] = useState<UserRow | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserRow | null>(null);
 
   const load = useCallback(async () => {
     try {
       const [hRes, uRes] = await Promise.all([
-        fetch(apiUrl("/api/households"), { headers: { "x-admin-key": ADMIN_KEY } }),
-        fetch(apiUrl("/api/users"), { headers: { "x-admin-key": ADMIN_KEY } }),
+        fetch(apiUrl("/api/households"), { credentials: "include" }),
+        fetch(apiUrl("/api/users"), { credentials: "include" }),
       ]);
-      if (hRes.ok) setHouseholds(await hRes.json());
-      if (uRes.ok) setUsers(await uRes.json());
-    } catch {}
+      if (!hRes.ok || !uRes.ok) throw new Error("Beheerdersgegevens ophalen mislukt");
+      setHouseholds(await hRes.json());
+      setUsers(await uRes.json());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Beheerdersgegevens ophalen mislukt");
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -172,7 +216,7 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
     try {
       const res = await fetch(apiUrl(`/api/households/${id}`), {
         method: "DELETE",
-        headers: { "x-admin-key": ADMIN_KEY },
+        credentials: "include",
       });
       if (!res.ok) throw new Error((await res.json()).error);
       setHouseholds((h) => h.filter((x) => x.id !== id));
@@ -183,11 +227,33 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
   const executeBan = async (user: UserRow) => {
     setConfirmBanUser(null);
     try {
-      const res = await fetch(apiUrl(`/api/users/${user.id}/ban`), { method: "POST" });
+      const res = await fetch(apiUrl(`/api/users/${user.id}/ban`), {
+        method: "POST",
+        credentials: "include",
+      });
       if (!res.ok) throw new Error((await res.json()).error);
-      setUsers((u) => u.filter((x) => x.id !== user.id));
-      toast.success(`${user.username} is gebanned`);
+      setUsers((rows) => rows.map((row) =>
+        row.id === user.id ? { ...row, isBanned: !row.isBanned } : row,
+      ));
+      toast.success(user.isBanned
+        ? `De ban van ${user.username} is opgeheven`
+        : `${user.username} is gebanned`);
     } catch (e: any) { toast.error(e.message); }
+  };
+
+  const executeDeleteUser = async (user: UserRow) => {
+    setConfirmDeleteUser(null);
+    try {
+      const res = await fetch(apiUrl(`/api/users/${user.id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setUsers((rows) => rows.filter((row) => row.id !== user.id));
+      toast.success(`${user.username} en het account zijn verwijderd`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gebruiker verwijderen mislukt");
+    }
   };
 
   const saveColors = async () => {
@@ -218,15 +284,23 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
     { id: "colors", label: "Kleuren", icon: Palette },
   ];
 
-  const visibleUsers = users.filter(u => !u.isBanned);
+  const visibleUsers = users;
 
   return (
     <>
       {confirmBanUser && (
         <BanConfirmModal
           username={confirmBanUser.username}
+          isBanned={confirmBanUser.isBanned}
           onConfirm={() => executeBan(confirmBanUser)}
           onCancel={() => setConfirmBanUser(null)}
+        />
+      )}
+      {confirmDeleteUser && (
+        <DeleteUserConfirmModal
+          username={confirmDeleteUser.username}
+          onConfirm={() => executeDeleteUser(confirmDeleteUser)}
+          onCancel={() => setConfirmDeleteUser(null)}
         />
       )}
 
@@ -287,10 +361,10 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
           {tab === "users" && (
             <>
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                {visibleUsers.length} actieve gebruiker{visibleUsers.length !== 1 ? "s" : ""}
+                {visibleUsers.length} gebruiker{visibleUsers.length !== 1 ? "s" : ""}
               </p>
               {visibleUsers.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-8">Geen actieve gebruikers</p>
+                <p className="text-sm text-muted-foreground text-center py-8">Geen gebruikers</p>
               )}
               {visibleUsers.map((u) => (
                 <div key={u.id} className="p-3 rounded-2xl border bg-card border-border">
@@ -304,11 +378,28 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
                       {u.ipAddress && <p className="text-xs text-muted-foreground font-mono">IP: {u.ipAddress}</p>}
                       <p className="text-xs text-muted-foreground">Lid sinds {new Date(u.createdAt).toLocaleDateString("nl-NL")}</p>
                     </div>
-                    <button onClick={() => setConfirmBanUser(u)}
-                      className="w-8 h-8 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center transition-colors shrink-0">
-                      <Shield className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setConfirmBanUser(u)}
+                        title={u.isBanned ? "Ban opheffen" : "Gebruiker bannen"}
+                        aria-label={u.isBanned ? `Ban van ${u.username} opheffen` : `${u.username} bannen`}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${u.isBanned ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-destructive/10 text-destructive hover:bg-destructive/20"}`}
+                      >
+                        {u.isBanned ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteUser(u)}
+                        title="Account definitief verwijderen"
+                        aria-label={`${u.username} definitief verwijderen`}
+                        className="w-9 h-9 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+                  {u.isBanned && (
+                    <p className="mt-2 ml-12 text-xs font-semibold text-destructive">Geblokkeerd</p>
+                  )}
                 </div>
               ))}
             </>
@@ -376,11 +467,28 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 }
 
 export function DeveloperPanel() {
+  const { user: clerkUser, isLoaded } = useClerkUser();
   const [scrollCount, setScrollCount] = useState(0);
   const [showPin, setShowPin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [canDevelop, setCanDevelop] = useState(false);
   const lastScrollTime = useRef(0);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setCanDevelop(false);
+    if (!isLoaded || !clerkUser?.id) return;
+    let active = true;
+    fetch(apiUrl("/api/users/admin-status"), { credentials: "include" })
+      .then(async (response) => response.ok ? response.json() : { isAdmin: false })
+      .then((result) => {
+        if (active) setCanDevelop(result.isAdmin === true);
+      })
+      .catch(() => {
+        if (active) setCanDevelop(false);
+      });
+    return () => { active = false; };
+  }, [clerkUser?.id, isLoaded]);
 
   const registerScroll = useCallback(() => {
     const now = Date.now();
@@ -402,6 +510,7 @@ export function DeveloperPanel() {
   }, []);
 
   useEffect(() => {
+    if (!canDevelop) return;
     const onWheel = (e: WheelEvent) => { if (e.deltaY > 0) registerScroll(); };
     let lastTouchY = 0;
     const onTouchStart = (e: TouchEvent) => { lastTouchY = e.touches[0]?.clientY ?? 0; };
@@ -417,8 +526,9 @@ export function DeveloperPanel() {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [registerScroll]);
+  }, [canDevelop, registerScroll]);
 
+  if (!isLoaded || !canDevelop) return null;
   if (showAdmin) return <AdminPanel onClose={() => setShowAdmin(false)} />;
   if (showPin) return (
     <PinScreen

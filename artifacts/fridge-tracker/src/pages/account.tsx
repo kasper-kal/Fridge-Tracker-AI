@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useClerk, useUser as useClerkUser } from "@clerk/react";
 import { User, Pencil, Check, X, Home, FileText, Shield, ChevronRight, LogOut, AlertTriangle, BookOpen, RotateCcw } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useUser } from "@/context/user-context";
@@ -9,12 +10,13 @@ import { requestOnboardingReplay } from "@/components/onboarding-slides";
 
 export default function AccountPage() {
   const { user, deviceId, updateUsername, deleteCurrentUserData } = useUser();
+  const { user: clerkUser } = useClerkUser();
+  const { signOut } = useClerk();
   const { household, leave } = useHousehold();
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState(user?.username ?? "");
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const handleReset = async () => {
@@ -24,6 +26,13 @@ export default function AccountPage() {
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith("fridge_")) localStorage.removeItem(key);
       }
+      if (clerkUser) {
+        try {
+          await signOut();
+        } catch {
+          toast.error("Je profiel is verwijderd, maar uitloggen is niet gelukt.");
+        }
+      }
       window.location.replace(import.meta.env.BASE_URL || "/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Resetten mislukt");
@@ -31,10 +40,16 @@ export default function AccountPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("fridge_device_id");
-    localStorage.removeItem("fridge_user");
-    window.location.reload();
+  const handleLogout = async () => {
+    for (const key of ["fridge_device_id", "fridge_user", "fridge_tracker_household"]) {
+      localStorage.removeItem(key);
+    }
+    try {
+      await signOut();
+      window.location.replace(import.meta.env.BASE_URL || "/");
+    } catch {
+      toast.error("Uitloggen is niet gelukt. Probeer het opnieuw.");
+    }
   };
 
   const saveUsername = async () => {
@@ -98,6 +113,43 @@ export default function AccountPage() {
           </div>
         </div>
 
+        {/* Account access and multi-device sign-in */}
+        <div className="bg-card border border-border rounded-3xl p-5 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Inloggen op een ander apparaat</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Koppel je profiel aan een account om het veilig terug te halen na uitloggen of op een nieuw apparaat.
+            </p>
+          </div>
+          {clerkUser ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-foreground truncate">
+                Ingelogd als {clerkUser.primaryEmailAddress?.emailAddress ?? "account"}
+              </p>
+              <button
+                onClick={handleLogout}
+                className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-secondary/40"
+              >
+                <LogOut className="w-4 h-4" />
+                Log uit
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Link href="/sign-up">
+                <button className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
+                  Account aanmaken
+                </button>
+              </Link>
+              <Link href="/sign-in">
+                <button className="w-full py-2.5 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-secondary/40">
+                  Inloggen
+                </button>
+              </Link>
+            </div>
+          )}
+        </div>
+
         {/* Household */}
         <div className="bg-card border border-border rounded-3xl overflow-hidden">
           <div className="px-5 py-3 border-b border-border">
@@ -115,7 +167,14 @@ export default function AccountPage() {
                 </div>
               </div>
               <button
-                onClick={() => { leave(); toast.success("Huishouden verlaten"); }}
+                onClick={async () => {
+                  try {
+                    await leave();
+                    toast.success("Huishouden verlaten");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Huishouden verlaten mislukt");
+                  }
+                }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -163,39 +222,6 @@ export default function AccountPage() {
             </button>
           </Link>
         </div>
-
-        {/* Logout */}
-        {!confirmLogout ? (
-          <button
-            onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors text-sm font-medium"
-          >
-            <LogOut className="w-4 h-4" />
-            Log uit
-          </button>
-        ) : (
-          <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <p className="text-sm font-medium">Weet je het zeker?</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Je wordt uitgelogd en je account wordt verwijderd van dit apparaat. Je kunt daarna een nieuw account aanmaken.</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmLogout(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-secondary/50 transition-colors"
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-xl bg-destructive text-white text-sm font-medium hover:bg-destructive/90 transition-colors"
-              >
-                Log uit
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Reset app */}
         {!confirmReset ? (

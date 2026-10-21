@@ -40,11 +40,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateColor = useCallback(async (key: "primaryColor" | "secondaryColor", value: string) => {
-    await fetch(apiUrl("/api/settings"), {
+    const response = await fetch(apiUrl("/api/settings"), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ key, value }),
     });
+    if (!response.ok) throw new Error("Kleuren opslaan mislukt");
     if (key === "primaryColor") {
       setPrimary(value);
       applyColors(value, secondaryColor);

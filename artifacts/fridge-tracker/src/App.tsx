@@ -1,5 +1,9 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { nlNL } from "@clerk/localizations";
+import { publishableKeyFromHost } from "@clerk/react/internal";
+import { Link } from "wouter";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HouseholdProvider } from "@/context/household-context";
@@ -8,7 +12,7 @@ import { ShoppingListProvider } from "@/context/shopping-list-context";
 import { UserProvider } from "@/context/user-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { useUser } from "@/context/user-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { hasSeenOnboarding, OnboardingSlides, ONBOARDING_RESTART_EVENT } from "@/components/onboarding-slides";
 import { UndoRedoBar } from "@/components/undo-redo-bar";
 import { CookieBanner } from "@/components/cookie-banner";
@@ -34,6 +38,21 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const appBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const clerkAppearance = {
+  cssLayerName: "clerk",
+  variables: {
+    colorPrimary: "#174a8b",
+    colorText: "#172033",
+    borderRadius: "1rem",
+  },
+};
 
 function Router() {
   return (
@@ -75,7 +94,7 @@ function TourNavigation({ active }: { active: boolean }) {
 }
 
 function AppInner() {
-  const { isBanned, isRegistered } = useUser();
+  const { isBanned, isRegistered, isLoading } = useUser();
 
   const [phase, setPhase] = useState<
     | "none"
@@ -161,6 +180,13 @@ function AppInner() {
     return () => document.removeEventListener(ONBOARDING_RESTART_EVENT, restart);
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[100dvh] bg-background text-foreground grid place-items-center">
+        <div className="text-sm text-muted-foreground">Account laden…</div>
+      </div>
+    );
+  }
   if (isBanned) return <BannedScreen />;
   const onboardingPhase = [
     "story",
@@ -176,18 +202,16 @@ function AppInner() {
 
   return (
     <>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <Router />
-        <TourNavigation
-          active={
-            phase === "add-options" ||
-            phase === "adding-manual" ||
-            phase === "adding-receipt" ||
-            phase === "adding-barcode" ||
-            phase === "add-save"
-          }
-        />
-      </WouterRouter>
+      <Router />
+      <TourNavigation
+        active={
+          phase === "add-options" ||
+          phase === "adding-manual" ||
+          phase === "adding-receipt" ||
+          phase === "adding-barcode" ||
+          phase === "add-save"
+        }
+      />
       {!onboardingPhase && <UndoRedoBar />}
       {!onboardingPhase && <Toaster position="top-center" />}
       {phase === "done" && <CookieBanner />}
@@ -217,7 +241,7 @@ function AppInner() {
   );
 }
 
-function App() {
+function AppProviders() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -234,6 +258,58 @@ function App() {
         </UserProvider>
       </TooltipProvider>
     </QueryClientProvider>
+  );
+}
+
+function AuthPage({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center gap-6 p-4">
+      <Link href="/" className="text-sm font-semibold text-primary">
+        Terug naar de koelkast
+      </Link>
+      {children}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
+      signInUrl={`${appBase}/sign-in`}
+      signUpUrl={`${appBase}/sign-up`}
+      signInFallbackRedirectUrl={`${appBase}/`}
+      signUpFallbackRedirectUrl={`${appBase}/`}
+      localization={nlNL}
+      appearance={clerkAppearance}
+    >
+      <WouterRouter base={appBase}>
+        <Switch>
+          <Route path="/sign-in/*?">
+            <AuthPage>
+              <SignIn
+                routing="path"
+                path={`${appBase}/sign-in`}
+                signUpUrl={`${appBase}/sign-up`}
+              />
+            </AuthPage>
+          </Route>
+          <Route path="/sign-up/*?">
+            <AuthPage>
+              <SignUp
+                routing="path"
+                path={`${appBase}/sign-up`}
+                signInUrl={`${appBase}/sign-in`}
+              />
+            </AuthPage>
+          </Route>
+          <Route>
+            <AppProviders />
+          </Route>
+        </Switch>
+      </WouterRouter>
+    </ClerkProvider>
   );
 }
 

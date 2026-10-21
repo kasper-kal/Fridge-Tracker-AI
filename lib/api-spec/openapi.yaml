@@ -122,6 +122,57 @@ paths:
                 $ref: "#/components/schemas/ProductsSummary"
 
   /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Retrieve the signed-in user's app profile
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: x-device-id
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        "200":
+          description: App profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: No profile is linked to this sign-in
+    patch:
+      operationId: updateCurrentUser
+      tags: [users]
+      summary: Update the signed-in user's app profile
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: x-device-id
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Updated app profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "403":
+          description: Profile does not belong to the signed-in user
     delete:
       operationId: deleteCurrentUser
       tags: [users]
@@ -139,8 +190,65 @@ paths:
           description: Device profile removed; shared inventory is retained
         "400":
           description: Missing or invalid device ID
+        "403":
+          description: Profile does not belong to the signed-in user
         "500":
           description: Reset failed
+
+  /users/me/household:
+    delete:
+      operationId: leaveCurrentHousehold
+      tags: [users]
+      summary: Remove the signed-in user's household membership
+      parameters:
+        - name: x-device-id
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "204":
+          description: Household membership removed
+        "400":
+          description: Missing or invalid device ID
+        "403":
+          description: Profile does not belong to the signed-in user
+
+  /users/admin-status:
+    get:
+      operationId: getCurrentUserAdminStatus
+      tags: [users]
+      summary: Check whether the signed-in user is a developer
+      responses:
+        "200":
+          description: Admin access status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStatus"
+
+  /users/{id}:
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user profile and its sign-in account
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: User removed
+        "403":
+          description: Developer access required
+        "404":
+          description: User not found
 
   /ai/parse-receipt:
     post:
@@ -164,6 +272,11 @@ paths:
                   $ref: "#/components/schemas/ParsedItem"
 
 components:
+  securitySchemes:
+    ClerkSession:
+      type: apiKey
+      in: cookie
+      name: __session
   schemas:
     HealthStatus:
       type: object
@@ -250,3 +363,39 @@ components:
           type: ["number", "null"]
         unit:
           type: ["string", "null"]
+    UserProfile:
+      type: object
+      required: [id, deviceId, username, isBanned, createdAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: string
+        username:
+          type: string
+        isBanned:
+          type: boolean
+        ipAddress:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        householdId:
+          type: ["integer", "null"]
+        householdName:
+          type: ["string", "null"]
+        householdIsCreator:
+          type: boolean
+    UserProfileUpdate:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          minLength: 1
+    AdminStatus:
+      type: object
+      required: [isAdmin]
+      properties:
+        isAdmin:
+          type: boolean

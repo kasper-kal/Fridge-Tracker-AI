@@ -77,6 +77,30 @@ export interface ParsedItem {
   unit?: string | null;
 }
 
+export interface UserProfile {
+  id: number;
+  deviceId: string;
+  username: string;
+  isBanned: boolean;
+  /** @nullable */
+  ipAddress?: string | null;
+  createdAt: string;
+  /** @nullable */
+  householdId?: number | null;
+  /** @nullable */
+  householdName?: string | null;
+  householdIsCreator?: boolean;
+}
+
+export interface UserProfileUpdate {
+  /** @minLength 1 */
+  username: string;
+}
+
+export interface AdminStatus {
+  isAdmin: boolean;
+}
+
 export type ListProductsParams = {
 location?: ListProductsLocation;
 };

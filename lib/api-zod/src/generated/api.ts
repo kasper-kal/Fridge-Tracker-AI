@@ -94,6 +94,61 @@ export const GetProductsSummaryResponse = zod.object({
 
 
 /**
+ * @summary Retrieve the signed-in user's app profile
+ */
+export const getCurrentUserHeaderXDeviceIdMax = 128;
+
+
+
+export const GetCurrentUserHeader = zod.object({
+  "x-device-id": zod.string().max(getCurrentUserHeaderXDeviceIdMax).optional()
+})
+
+export const GetCurrentUserResponse = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.string(),
+  "username": zod.string(),
+  "isBanned": zod.boolean(),
+  "ipAddress": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "householdId": zod.number().nullish(),
+  "householdName": zod.string().nullish(),
+  "householdIsCreator": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Update the signed-in user's app profile
+ */
+export const updateCurrentUserHeaderXDeviceIdMax = 128;
+
+
+
+export const UpdateCurrentUserHeader = zod.object({
+  "x-device-id": zod.string().min(1).max(updateCurrentUserHeaderXDeviceIdMax)
+})
+
+
+
+
+export const UpdateCurrentUserBody = zod.object({
+  "username": zod.string().min(1)
+})
+
+export const UpdateCurrentUserResponse = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.string(),
+  "username": zod.string(),
+  "isBanned": zod.boolean(),
+  "ipAddress": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "householdId": zod.number().nullish(),
+  "householdName": zod.string().nullish(),
+  "householdIsCreator": zod.boolean().optional()
+})
+
+
+/**
  * @summary Remove the current device profile
  */
 export const deleteCurrentUserHeaderXDeviceIdMax = 128;
@@ -102,6 +157,34 @@ export const deleteCurrentUserHeaderXDeviceIdMax = 128;
 
 export const DeleteCurrentUserHeader = zod.object({
   "x-device-id": zod.string().min(1).max(deleteCurrentUserHeaderXDeviceIdMax)
+})
+
+
+/**
+ * @summary Remove the signed-in user's household membership
+ */
+export const leaveCurrentHouseholdHeaderXDeviceIdMax = 128;
+
+
+
+export const LeaveCurrentHouseholdHeader = zod.object({
+  "x-device-id": zod.string().min(1).max(leaveCurrentHouseholdHeaderXDeviceIdMax)
+})
+
+
+/**
+ * @summary Check whether the signed-in user is a developer
+ */
+export const GetCurrentUserAdminStatusResponse = zod.object({
+  "isAdmin": zod.boolean()
+})
+
+
+/**
+ * @summary Delete a user profile and its sign-in account
+ */
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 

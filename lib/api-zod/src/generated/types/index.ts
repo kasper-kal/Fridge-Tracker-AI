@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminStatus';
 export * from './healthStatus';
 export * from './listProductsLocation';
 export * from './listProductsParams';
@@ -18,3 +19,5 @@ export * from './productsSummary';
 export * from './productStorageLocation';
 export * from './productUpdate';
 export * from './productUpdateStorageLocation';
+export * from './userProfile';
+export * from './userProfileUpdate';

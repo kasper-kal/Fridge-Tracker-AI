@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Refrigerator, User } from "lucide-react";
+import { Link } from "wouter";
+import { useUser as useClerkUser } from "@clerk/react";
 import { useUser } from "@/context/user-context";
 import { toast } from "sonner";
 import { OnboardingCard } from "@/components/onboarding-card";
 
 export function UserSetupModal() {
   const { isRegistered, register } = useUser();
+  const { user: clerkUser } = useClerkUser();
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +75,17 @@ export function UserSetupModal() {
         <p className="mt-4 text-center text-xs text-muted-foreground">
           Je naam is alleen zichtbaar voor huisgenoten en beheerders.
         </p>
+        {!clerkUser && (
+          <div className="mt-4 border-t border-border pt-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              Wil je later op een ander apparaat inloggen?
+            </p>
+            <div className="mt-2 flex justify-center gap-4 text-sm font-semibold">
+              <Link href="/sign-up" className="text-primary">Account aanmaken</Link>
+              <Link href="/sign-in" className="text-primary">Ik heb al een account</Link>
+            </div>
+          </div>
+        )}
       </OnboardingCard>
     </div>
   );

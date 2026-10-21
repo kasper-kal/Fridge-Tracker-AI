@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { appSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/admin";
 
 const router = Router();
 
@@ -18,7 +19,7 @@ router.get("/", async (_req, res) => {
 });
 
 // PUT /settings — upsert a key
-router.put("/", async (req, res) => {
+router.put("/", requireAdmin, async (req, res) => {
   try {
     const { key, value } = req.body ?? {};
     if (!key || typeof key !== "string" || !value || typeof value !== "string") {
