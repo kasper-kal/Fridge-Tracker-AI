@@ -1,0 +1,176 @@
+[
+  {
+    "vp": "desktop",
+    "route": "/",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Koelkast Houd je verse producten bij. 3 in koelkast 2 in vriezer 0 in voor",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/freezer",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Vriezer Overzicht van je diepvries. 3 in koelkast 2 in vriezer 0 in voorra",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/pantry",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Voorraad Droge waren, blikken en houdbare producten. 3 in koelkast 2 in vr",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/account",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Account Jouw profiel en instellingen Kasper ID: audit-de…ce-1 Account en",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/help",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Gebruikersaanwijzing Alles over het gebruik van Koelkast Tracker. Welkom b",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/terms",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Gebruiksvoorwaarden Laatst bijgewerkt: juli 2026 1. Acceptatie van voorwaa",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/privacy",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Koelkast Tracker Product toevoegen Koelkast 3 Voorraad 0 Vriezer 2 Account Uitleg Privacybeleid Laatst bijgewerkt: juli 2026 1. Welke gegevens verzamelen wi",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/sign-in",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Terug naar de koelkast Inloggen om door te gaan naar Fridge Tracker AI of E-mailadres of gebruikersnaam Gebruik telefoon Wachtwoord Doorgaan Geen account? Re",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "/sign-up",
+    "scrollW": 1440,
+    "clientW": 1440,
+    "scrollH": 900,
+    "bodyText": "Terug naar de koelkast Maak je account aan om door te gaan naar Fridge Tracker AI of E-mailadres Wachtwoord Doorgaan Heb je al een account? Inloggen Secured",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 844,
+    "bodyText": "Koelkast Houd je verse producten bij. 3 in koelkast 2 in vriezer 0 in voorraad Lijst Vriezer Voorraad Verwijder Oude kaas plakken · 21 okt 3 Lijst Vriezer ",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/freezer",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 844,
+    "bodyText": "Vriezer Overzicht van je diepvries. 3 in koelkast 2 in vriezer 0 in voorraad Lijst Koelkast Voorraad Verwijder Pizza margherita stuks · 21 okt 2 Lijst Koel",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/pantry",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 844,
+    "bodyText": "Voorraad Droge waren, blikken en houdbare producten. 3 in koelkast 2 in vriezer 0 in voorraad Je voorraadkast is leeg Bewaar hier droge waren, blikken en and",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/account",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 1098,
+    "bodyText": "Account Jouw profiel en instellingen Kasper ID: audit-de…ce-1 Account en andere apparaten Niet ingelogd. Heb je al een account? Log op dezelfde manier in a",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/help",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 8797,
+    "bodyText": "Gebruikersaanwijzing Alles over het gebruik van Koelkast Tracker. Welkom bij Koelkast Tracker Voeg snel producten toe via de + knop — handmatig, met de camer",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/terms",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 1097,
+    "bodyText": "Gebruiksvoorwaarden Laatst bijgewerkt: juli 2026 1. Acceptatie van voorwaarden Door gebruik te maken van Koelkast Tracker ga je akkoord met deze gebruiksvoor",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/privacy",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 1181,
+    "bodyText": "Privacybeleid Laatst bijgewerkt: juli 2026 1. Welke gegevens verzamelen wij? Een willekeurig gegenereerde apparaat-ID (opgeslagen lokaal) Jouw gekozen gebruik",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/sign-in",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 844,
+    "bodyText": "Terug naar de koelkast Inloggen om door te gaan naar Fridge Tracker AI of E-mailadres of gebruikersnaam Gebruik telefoon Wachtwoord Doorgaan Geen account? Re",
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "/sign-up",
+    "scrollW": 390,
+    "clientW": 390,
+    "scrollH": 844,
+    "bodyText": "Terug naar de koelkast Maak je account aan om door te gaan naar Fridge Tracker AI of E-mailadres Wachtwoord Doorgaan Heb je al een account? Inloggen Secured",
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "route": "interactions",
+    "moreVisible": true,
+    "errors": []
+  },
+  {
+    "vp": "phone",
+    "route": "interactions",
+    "moreVisible": true,
+    "errors": []
+  }
+]
