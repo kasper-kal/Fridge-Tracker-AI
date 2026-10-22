@@ -1,6 +1,7 @@
 import { ReactNode, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { BottomNav } from "./bottom-nav";
+import { Sidebar } from "./sidebar";
 import { NetworkIndicator } from "./network-indicator";
 import { RefreshCw } from "lucide-react";
 
@@ -120,9 +121,11 @@ export function Layout({ children, onRefresh }: LayoutProps) {
   const showIndicator = pullY > 8 || refreshing;
 
   return (
-    <div className="min-h-[100dvh] w-full max-w-[430px] mx-auto bg-background relative flex flex-col shadow-2xl overflow-hidden">
+    <div className="app-shell min-h-[100dvh] lg:h-[100dvh] bg-background relative flex flex-col lg:flex-row overflow-hidden">
       <NetworkIndicator />
+      <Sidebar />
 
+      <div className="relative flex min-w-0 flex-1 flex-col">
       {onRefresh && showIndicator && (
         <div
           className="absolute top-0 left-0 right-0 flex justify-center items-end z-30 pointer-events-none"
@@ -145,7 +148,7 @@ export function Layout({ children, onRefresh }: LayoutProps) {
 
       <main
         ref={mainRef}
-        className="flex-1 pb-24 overflow-y-auto custom-scrollbar"
+        className="flex-1 pb-24 lg:pb-12 overflow-y-auto custom-scrollbar"
         style={{
           paddingTop: showIndicator ? (refreshing ? PULL_THRESHOLD : pullY) : 0,
           transition:
@@ -155,9 +158,10 @@ export function Layout({ children, onRefresh }: LayoutProps) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {children}
+        <div className="mx-auto w-full max-w-[1400px]">{children}</div>
       </main>
       <BottomNav />
+      </div>
     </div>
   );
 }

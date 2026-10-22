@@ -42,6 +42,9 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   root: path.resolve(import.meta.dirname),
+  // Read a single .env from the repo root instead of one per artifact.
+  // Only VITE_-prefixed vars are exposed to the browser bundle.
+  envDir: path.resolve(import.meta.dirname, "..", ".."),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
@@ -53,6 +56,16 @@ export default defineConfig({
     allowedHosts: true,
     fs: {
       strict: true,
+    },
+    // Same-origin API in development, matching production. Keeping the frontend
+    // and API on one origin means Clerk's session cookie reaches the API, so
+    // sign-in, admin routes and profile linking work locally - and VITE_API_URL
+    // can stay empty.
+    proxy: {
+      "/api": {
+        target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8080",
+        changeOrigin: false,
+      },
     },
   },
   preview: {

@@ -134,7 +134,8 @@ router.get("/summary", async (req, res) => {
 
     const fridge = rows.find((r) => r.location === "fridge")?.count ?? 0;
     const freezer = rows.find((r) => r.location === "freezer")?.count ?? 0;
-    res.json({ fridge, freezer, total: fridge + freezer });
+    const pantry = rows.find((r) => r.location === "pantry")?.count ?? 0;
+    res.json({ fridge, freezer, pantry, total: fridge + freezer + pantry });
   } catch {
     res.status(500).json({ error: "Failed to fetch summary" });
   }

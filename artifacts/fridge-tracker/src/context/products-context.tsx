@@ -148,11 +148,15 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const applyServerData = useCallback((data: LocalProduct[]) => {
     if (!Array.isArray(data)) return;
     setProductsRaw((current) => {
-      const serverIds = data.map((p) => `${p.id}:${p.quantity}:${p.name}:${p.storageLocation}`).join(",");
-      const localIds  = current.map((p) => `${p.id}:${p.quantity}:${p.name}:${p.storageLocation}`).join(",");
-      if (serverIds === localIds) return current;
-      writeStorage(storageKey(householdId), data);
-      return data;
+      // Products still waiting to reach the server (offline, or the request was
+      // rejected) have a negative id. A successful poll must not delete them.
+      const pending = current.filter((p) => p.id < 0);
+      const next = pending.length ? [...pending, ...data] : data;
+      const nextIds = next.map((p) => `${p.id}:${p.quantity}:${p.name}:${p.storageLocation}`).join(",");
+      const localIds = current.map((p) => `${p.id}:${p.quantity}:${p.name}:${p.storageLocation}`).join(",");
+      if (nextIds === localIds) return current;
+      writeStorage(storageKey(householdId), next);
+      return next;
     });
   }, [householdId]);
 

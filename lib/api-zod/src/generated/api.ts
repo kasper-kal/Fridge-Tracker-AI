@@ -20,7 +20,7 @@ export const HealthCheckResponse = zod.object({
  * @summary List all products
  */
 export const ListProductsQueryParams = zod.object({
-  "location": zod.enum(['fridge', 'freezer']).optional()
+  "location": zod.enum(['fridge', 'freezer', 'pantry']).optional()
 })
 
 export const ListProductsResponseItem = zod.object({
@@ -28,7 +28,7 @@ export const ListProductsResponseItem = zod.object({
   "name": zod.string(),
   "quantity": zod.number(),
   "unit": zod.string(),
-  "storageLocation": zod.enum(['fridge', 'freezer']),
+  "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']),
   "createdAt": zod.coerce.date()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
@@ -44,7 +44,7 @@ export const CreateProductBody = zod.object({
   "name": zod.string().min(1),
   "quantity": zod.number(),
   "unit": zod.string(),
-  "storageLocation": zod.enum(['fridge', 'freezer'])
+  "storageLocation": zod.enum(['fridge', 'freezer', 'pantry'])
 })
 
 
@@ -62,7 +62,7 @@ export const UpdateProductBody = zod.object({
   "name": zod.string().min(1).optional(),
   "quantity": zod.number().optional(),
   "unit": zod.string().optional(),
-  "storageLocation": zod.enum(['fridge', 'freezer']).optional()
+  "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']).optional()
 })
 
 export const UpdateProductResponse = zod.object({
@@ -70,7 +70,7 @@ export const UpdateProductResponse = zod.object({
   "name": zod.string(),
   "quantity": zod.number(),
   "unit": zod.string(),
-  "storageLocation": zod.enum(['fridge', 'freezer']),
+  "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']),
   "createdAt": zod.coerce.date()
 })
 
@@ -89,6 +89,7 @@ export const DeleteProductParams = zod.object({
 export const GetProductsSummaryResponse = zod.object({
   "fridge": zod.number(),
   "freezer": zod.number(),
+  "pantry": zod.number(),
   "total": zod.number()
 })
 

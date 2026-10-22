@@ -24,6 +24,23 @@ function parseBody(body: unknown): { name: string; pin: string; deviceId?: strin
   };
 }
 
+/**
+ * Sharing is the one thing a guest profile cannot do. Returns an error message
+ * when the caller has a profile but never chose a name.
+ */
+async function guestBlockReason(deviceId?: string): Promise<string | null> {
+  if (!deviceId) return null;
+  const [row] = await db
+    .select({ username: usersTable.username })
+    .from(usersTable)
+    .where(eq(usersTable.deviceId, deviceId))
+    .limit(1);
+  if (row && !row.username.trim()) {
+    return "Stel eerst een gebruikersnaam in voordat je een huishouden deelt";
+  }
+  return null;
+}
+
 // GET /households — list all (admin)
 router.get("/", requireAdmin, async (_req, res) => {
   try {
@@ -42,6 +59,9 @@ router.post("/", async (req, res) => {
   try {
     const body = parseBody(req.body);
     if (!body) { res.status(400).json({ error: "Ongeldige invoer" }); return; }
+
+    const blocked = await guestBlockReason(body.deviceId);
+    if (blocked) { res.status(403).json({ error: blocked }); return; }
 
     const existing = await db
       .select()
@@ -76,6 +96,9 @@ router.post("/join", async (req, res) => {
   try {
     const body = parseBody(req.body);
     if (!body) { res.status(400).json({ error: "Ongeldige invoer" }); return; }
+
+    const blocked = await guestBlockReason(body.deviceId);
+    if (blocked) { res.status(403).json({ error: blocked }); return; }
 
     const [household] = await db
       .select()

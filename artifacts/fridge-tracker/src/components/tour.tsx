@@ -356,7 +356,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
                   <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={rect.r} fill="black" />
                 </mask>
               </defs>
-              <rect width="100%" height="100%" fill="rgba(0,0,0,0.78)" mask="url(#tour-mask)" />
+              <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#tour-mask)" />
             </svg>
           </div>
 
@@ -393,8 +393,8 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
           <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
             {mode === "swipe" ? "Daarna dit" : "Eerst dit"}
           </p>
-          <h3 className="font-bold text-lg text-foreground mb-1.5">{current.title}</h3>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-4">{current.description}</p>
+          <h3 className="font-bold text-base leading-snug text-foreground mb-1">{current.title}</h3>
+          <p className="text-[13px] text-muted-foreground leading-relaxed mb-3">{current.description}</p>
           {!targetFound && (
             <p role="status" className="mb-4 rounded-xl bg-secondary/50 p-3 text-sm text-muted-foreground">
               Dit onderdeel is hier niet zichtbaar. Je kunt de app blijven gebruiken of de rondleiding overslaan.

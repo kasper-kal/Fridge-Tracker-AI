@@ -14,7 +14,7 @@ export default function FridgePage() {
 
   return (
     <Layout onRefresh={refetch}>
-      <div className="pt-12 pb-4 px-6 bg-gradient-to-b from-primary/5 to-transparent">
+      <div className="pt-12 pb-4 px-6 lg:px-10 lg:pt-10 bg-gradient-to-b from-primary/5 to-transparent">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-foreground">Koelkast</h1>
@@ -30,10 +30,14 @@ export default function FridgePage() {
             )}
           </div>
           <div className="mt-2 flex items-center gap-1">
-            <Link href="/account" data-tour="account-button">
-              <button className="p-2 rounded-full hover:bg-secondary transition-colors active:scale-95">
-                <UserCircle className="w-6 h-6 text-foreground" />
-              </button>
+            <Link
+              href="/account"
+              data-tour="account-button"
+              aria-label="Account"
+              title="Account"
+              className="inline-flex p-2 rounded-full hover:bg-secondary transition-colors active:scale-95 lg:hidden"
+            >
+              <UserCircle className="w-6 h-6 text-foreground" />
             </Link>
             <span data-tour="household-button" className="inline-flex"><HouseholdDialog /></span>
             <span data-tour="shopping-list-button" className="inline-flex"><ShoppingListDrawer /></span>
@@ -43,7 +47,7 @@ export default function FridgePage() {
 
       <SummaryStrip />
 
-      <div className="px-6 pb-4">
+      <div className="px-6 pb-4 lg:px-10">
         {isLoading ? (
           <ProductListSkeleton />
         ) : (
@@ -51,7 +55,7 @@ export default function FridgePage() {
             products={fridgeProducts}
             emptyIcon={<Refrigerator className="w-10 h-10 text-muted-foreground" />}
             emptyTitle="Je koelkast is leeg"
-            emptyMessage="Tik op de + knop hieronder om je eerste product toe te voegen."
+            emptyMessage="Tik op de + om je eerste product toe te voegen."
           />
         )}
       </div>

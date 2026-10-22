@@ -21,8 +21,13 @@ router.post("/parse-receipt", async (req, res) => {
     const { text } = body.data;
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 1024,
+      // The 20B variant is plenty for text -> JSON extraction and is ~2x
+      // cheaper / faster than 120B on the same free-tier rate limits.
+      model: "openai/gpt-oss-20b",
+      max_tokens: 2048,
+      // Reasoning models bill reasoning tokens against max_tokens; keep the
+      // budget small so a receipt can't be truncated into an empty array.
+      reasoning_effort: "low",
       messages: [
         {
           role: "system",

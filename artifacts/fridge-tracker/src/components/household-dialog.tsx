@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Users, Plus, LogIn, LogOut, Home, Eye, EyeOff, QrCode, ScanLine, Trash2 } from "lucide-react";
+import { Link } from "wouter";
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ function apiUrl(path: string) {
 
 async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(apiUrl(path), {
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...options,
   });
@@ -38,7 +40,7 @@ function decodeQR(text: string): { name: string; pin: string } | null {
 
 export function HouseholdDialog() {
   const { household, setHousehold, leave } = useHousehold();
-  const { deviceId } = useUser();
+  const { deviceId, isGuest } = useUser();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"create" | "join">("create");
   const [joinMode, setJoinMode] = useState<"form" | "qr">("form");
@@ -146,7 +148,11 @@ export function HouseholdDialog() {
   return (
     <Drawer open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DrawerTrigger asChild>
-        <button className="relative p-2 rounded-full hover:bg-secondary transition-colors active:scale-95">
+        <button
+          aria-label="Huishouden"
+          title="Huishouden"
+          className="relative p-2 rounded-full hover:bg-secondary transition-colors active:scale-95"
+        >
           <Users className="w-6 h-6 text-foreground" />
           {household && (
             <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
@@ -154,7 +160,7 @@ export function HouseholdDialog() {
         </button>
       </DrawerTrigger>
 
-      <DrawerContent className="max-w-[430px] mx-auto max-h-[90vh]">
+      <DrawerContent className="max-w-[430px] mx-auto max-h-[90vh] lg:rounded-3xl lg:bottom-6">
         <DrawerTitle className="sr-only">Huishouden</DrawerTitle>
 
         <div className="overflow-y-auto px-6 pt-6 pb-8 space-y-5">
@@ -271,6 +277,19 @@ export function HouseholdDialog() {
                   </Button>
                 )
               )}
+            </div>
+          ) : isGuest ? (
+            <div className="space-y-3 rounded-2xl border border-border bg-secondary/30 p-4">
+              <p className="text-sm font-semibold text-foreground">Eerst een naam</p>
+              <p className="text-xs text-muted-foreground">
+                Je gebruikt de app als gast. Met een naam kun je een huishouden aanmaken of je bij
+                je huisgenoten aansluiten.
+              </p>
+              <Link href="/account" onClick={() => setOpen(false)}>
+                <button className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground">
+                  Naam instellen
+                </button>
+              </Link>
             </div>
           ) : (
             <div className="space-y-4">

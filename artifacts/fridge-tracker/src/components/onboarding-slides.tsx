@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ShoppingCart, Refrigerator, ChevronRight } from "lucide-react";
-import { OnboardingCard } from "@/components/onboarding-card";
 
 const STORY_KEY = "fridge_onboarding_seen";
 export const ONBOARDING_RESTART_EVENT = "restart-onboarding";
@@ -15,19 +14,19 @@ export function hasSeenOnboarding() {
 
 const slides = [
   {
-    icon: <ShoppingCart className="w-10 h-10 text-amber-400" />,
+    icon: <ShoppingCart className="h-5 w-5 text-amber-500" />,
     iconBg: "bg-amber-400/15",
     eyebrow: "Herken je dit?",
-    title: "Je staat in de supermarkt.",
-    body: "Maar moet je nou wel of niet melk halen? Is er nog genoeg brood thuis? En die soep van vorige week \u2014 weg of niet?",
+    title: "Nooit meer twijfelen in de winkel.",
+    body: "Je ziet meteen wat er thuis nog ligt \u2014 en wat je moet halen.",
     cta: "Volgende",
   },
   {
-    icon: <Refrigerator className="w-10 h-10 text-primary" />,
+    icon: <Refrigerator className="h-5 w-5 text-primary" />,
     iconBg: "bg-primary/10",
-    eyebrow: "De oplossing",
-    title: "Koelkast Tracker weet het voor je.",
-    body: "Altijd precies zien wat je thuis hebt \u2014 nooit meer dubbele boodschappen of lege koelkast momenten.",
+    eyebrow: "Zo werkt het",
+    title: "Bon scannen, klaar.",
+    body: "Scan een kassabon of barcode en je voorraad staat erin. Delen met huisgenoten kan ook.",
     cta: "Start de rondleiding",
   },
 ];
@@ -63,53 +62,58 @@ export function OnboardingSlides({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/[.78] p-4 backdrop-blur-sm sm:p-6">
-      <OnboardingCard
-        step={index + 1}
-        totalSteps={slides.length}
-        progressLabel="Introductie"
+    <div
+      className="fixed inset-0 z-[70] flex flex-col justify-end bg-black/40"
+      onClick={skip}
+    >
+      <section
+        role="dialog"
+        aria-label={`Introductie, ${index + 1} van ${slides.length}`}
+        onClick={(event) => event.stopPropagation()}
+        className="mx-auto w-full max-w-md rounded-t-[28px] border-t border-border bg-card p-5 pb-safe shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.45)] lg:mb-8 lg:rounded-[28px] lg:border"
       >
-        <div className="flex flex-col items-center text-center">
-          <div className={`mb-4 flex h-20 w-20 items-center justify-center rounded-3xl ${current.iconBg}`}>
-            {current.icon}
-          </div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-            {current.eyebrow}
-          </p>
-          <h1 className="text-3xl font-bold leading-tight text-foreground">
-            {current.title}
-          </h1>
-          <p className="mt-3 max-w-xs text-base leading-relaxed text-muted-foreground">
-            {current.body}
-          </p>
+        <div className="mb-4 flex gap-1.5" aria-hidden="true">
+          {slides.map((_, position) => (
+            <span
+              key={position}
+              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                position === index ? "bg-primary" : position < index ? "bg-primary/35" : "bg-border"
+              }`}
+            />
+          ))}
         </div>
 
-        <div className="mt-6 space-y-3">
-          <button
-            onClick={next}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 active:scale-[.98]"
-          >
-            {current.cta}
-            {!isLast && <ChevronRight className="h-5 w-5" />}
-          </button>
-          {!isLast && (
-            <button
-              onClick={skip}
-              className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Intro overslaan
-            </button>
-          )}
-          {isLast && (
-            <button
-              onClick={skip}
-              className="w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Intro overslaan
-            </button>
-          )}
+        <div className="flex items-start gap-3">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${current.iconBg}`}>
+            {current.icon}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              {current.eyebrow}
+            </p>
+            <h2 className="mt-1 text-xl font-bold leading-snug text-foreground">
+              {current.title}
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              {current.body}
+            </p>
+          </div>
         </div>
-      </OnboardingCard>
+
+        <button
+          onClick={next}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 active:scale-[.98]"
+        >
+          {current.cta}
+          {!isLast && <ChevronRight className="h-4 w-4" />}
+        </button>
+        <button
+          onClick={skip}
+          className="mt-1 w-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Intro overslaan
+        </button>
+      </section>
     </div>
   );
 }

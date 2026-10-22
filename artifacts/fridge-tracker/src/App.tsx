@@ -1,6 +1,6 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useUser as useClerkUser } from "@clerk/react";
 import { nlNL } from "@clerk/localizations";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { Link } from "wouter";
@@ -18,6 +18,7 @@ import { UndoRedoBar } from "@/components/undo-redo-bar";
 import { CookieBanner } from "@/components/cookie-banner";
 import { UserSetupModal } from "@/components/user-setup-modal";
 import { BannedScreen } from "@/components/banned-screen";
+import { SignedOutGate, hasChosenGuestMode, rememberGuestMode } from "@/components/auth-gate";
 import { DeveloperPanel } from "@/components/developer-panel";
 import { TourOverlay, TOUR_SEEN_KEY, signalTourAction } from "@/components/tour";
 import type { TourActionDetail } from "@/components/tour";
@@ -45,6 +46,7 @@ const clerkPubKey = publishableKeyFromHost(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
 );
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const clerkConfigured = Boolean(clerkPubKey);
 const clerkAppearance = {
   cssLayerName: "clerk",
   variables: {
@@ -95,6 +97,8 @@ function TourNavigation({ active }: { active: boolean }) {
 
 function AppInner() {
   const { isBanned, isRegistered, isLoading } = useUser();
+  const { isLoaded: isClerkLoaded, isSignedIn } = useClerkUser();
+  const [guestMode, setGuestMode] = useState(hasChosenGuestMode);
 
   const [phase, setPhase] = useState<
     | "none"
@@ -187,6 +191,19 @@ function AppInner() {
       </div>
     );
   }
+  // Nobody signed in and no profile on this device: offer a real sign-in path
+  // instead of dropping straight into "create a brand new profile". Without a
+  // Clerk key there is no sign-in to offer, so the app keeps its old behaviour.
+  if (clerkConfigured && isClerkLoaded && !isSignedIn && !isRegistered && !guestMode) {
+    return (
+      <SignedOutGate
+        onContinueAsGuest={() => {
+          rememberGuestMode();
+          setGuestMode(true);
+        }}
+      />
+    );
+  }
   if (isBanned) return <BannedScreen />;
   const onboardingPhase = [
     "story",
@@ -262,12 +279,16 @@ function AppProviders() {
 }
 
 function AuthPage({ children }: { children: ReactNode }) {
+  // Email, phone, username and social buttons make Clerk's card tall, so this
+  // page scrolls instead of centring the card off both edges of the screen.
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center gap-6 p-4">
-      <Link href="/" className="text-sm font-semibold text-primary">
-        Terug naar de koelkast
-      </Link>
-      {children}
+    <div className="min-h-[100dvh] overflow-y-auto bg-background text-foreground">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 px-4 py-10">
+        <Link href="/" className="text-sm font-semibold text-primary">
+          Terug naar de koelkast
+        </Link>
+        {children}
+      </div>
     </div>
   );
 }

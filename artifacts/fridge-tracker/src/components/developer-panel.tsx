@@ -166,9 +166,11 @@ function DeleteUserConfirmModal({ username, onConfirm, onCancel }: {
         <div className="text-center space-y-2">
           <p className="text-lg font-bold text-foreground">Account definitief verwijderen?</p>
           <p className="text-sm text-muted-foreground">
-            Het profiel en de inloggegevens van <span className="font-semibold text-foreground">{username}</span> worden verwijderd. Gedeelde producten, boodschappenlijsten en het huishouden blijven bestaan.
+            Het profiel en het inlogaccount van <span className="font-semibold text-foreground">{username}</span> worden verwijderd, inclusief het inlogaccount (e-mail of social login). Gedeelde producten, boodschappenlijsten en het huishouden blijven bestaan.
           </p>
-          <p className="text-xs font-medium text-destructive">Dit kan niet ongedaan worden gemaakt.</p>
+          <p className="text-xs font-medium text-destructive">
+            Dit kan niet ongedaan worden gemaakt — de gebruiker kan daarna niet meer inloggen.
+          </p>
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 py-3 rounded-2xl border border-border text-sm font-semibold text-foreground hover:bg-secondary/50 transition-colors">
@@ -248,9 +250,16 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         method: "DELETE",
         credentials: "include",
       });
-      if (!res.ok) throw new Error((await res.json()).error);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Gebruiker verwijderen mislukt");
       setUsers((rows) => rows.filter((row) => row.id !== user.id));
-      toast.success(`${user.username} en het account zijn verwijderd`);
+      if (data.signInAccountDeleted === false) {
+        toast.warning(`${user.username} is verwijderd, maar het inlogaccount niet`, {
+          description: "Verwijder dat account handmatig in het Clerk-dashboard.",
+        });
+      } else {
+        toast.success(`${user.username} en het inlogaccount zijn verwijderd`);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gebruiker verwijderen mislukt");
     }
@@ -373,33 +382,35 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
                       <Users className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-foreground">{u.username}</p>
+                      <p className="font-semibold text-sm text-foreground">{u.username || "Gast"}</p>
                       <p className="text-xs text-muted-foreground font-mono truncate">ID: {u.deviceId.slice(0, 12)}…</p>
                       {u.ipAddress && <p className="text-xs text-muted-foreground font-mono">IP: {u.ipAddress}</p>}
                       <p className="text-xs text-muted-foreground">Lid sinds {new Date(u.createdAt).toLocaleDateString("nl-NL")}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => setConfirmBanUser(u)}
-                        title={u.isBanned ? "Ban opheffen" : "Gebruiker bannen"}
-                        aria-label={u.isBanned ? `Ban van ${u.username} opheffen` : `${u.username} bannen`}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${u.isBanned ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-destructive/10 text-destructive hover:bg-destructive/20"}`}
-                      >
-                        {u.isBanned ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteUser(u)}
-                        title="Account definitief verwijderen"
-                        aria-label={`${u.username} definitief verwijderen`}
-                        className="w-9 h-9 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {u.isBanned && (
+                      <span className="shrink-0 px-2 py-1 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold uppercase tracking-wider">
+                        Geblokkeerd
+                      </span>
+                    )}
                   </div>
-                  {u.isBanned && (
-                    <p className="mt-2 ml-12 text-xs font-semibold text-destructive">Geblokkeerd</p>
-                  )}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => setConfirmBanUser(u)}
+                      title={u.isBanned ? "Toegang weer toestaan" : "Toegang blokkeren (account blijft bestaan)"}
+                      className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold transition-colors ${u.isBanned ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"}`}
+                    >
+                      {u.isBanned ? <ShieldOff className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                      {u.isBanned ? "Deblokkeren" : "Bannen"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteUser(u)}
+                      title="Account definitief verwijderen"
+                      className="flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Verwijderen
+                    </button>
+                  </div>
                 </div>
               ))}
             </>

@@ -9,30 +9,48 @@ import { toast } from "sonner";
 import { requestOnboardingReplay } from "@/components/onboarding-slides";
 
 export default function AccountPage() {
-  const { user, deviceId, updateUsername, deleteCurrentUserData } = useUser();
+  const { user, deviceId, updateUsername, deleteCurrentUserData, isGuest } = useUser();
   const { user: clerkUser } = useClerkUser();
   const { signOut } = useClerk();
   const { household, leave } = useHousehold();
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState(user?.username ?? "");
+  const displayName = user?.username?.trim() || "Gast";
+  // E-mail + password and social sign-in are the only identifiers; a username
+  // is optional, so fall back to it (and then to a neutral label) rather than
+  // assuming one is set.
+  const clerkIdentifier =
+    clerkUser?.primaryEmailAddress?.emailAddress ||
+    (clerkUser?.username ? `@${clerkUser.username}` : "") ||
+    "account";
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
+  const clearLocalProfile = () => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("fridge_")) localStorage.removeItem(key);
+    }
+  };
+
   const handleReset = async () => {
     setResetting(true);
     try {
-      await deleteCurrentUserData();
-      for (const key of Object.keys(localStorage)) {
-        if (key.startsWith("fridge_")) localStorage.removeItem(key);
-      }
       if (clerkUser) {
+        // The profile lives in the account, so a reset only clears this device.
+        // Deleting the shared profile here would also wipe the account on every
+        // other device the person is signed in on.
+        clearLocalProfile();
         try {
           await signOut();
         } catch {
-          toast.error("Je profiel is verwijderd, maar uitloggen is niet gelukt.");
+          toast.error("Dit apparaat is gewist, maar uitloggen is niet gelukt.");
         }
+        window.location.replace(import.meta.env.BASE_URL || "/");
+        return;
       }
+      await deleteCurrentUserData();
+      clearLocalProfile();
       window.location.replace(import.meta.env.BASE_URL || "/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Resetten mislukt");
@@ -41,12 +59,14 @@ export default function AccountPage() {
   };
 
   const handleLogout = async () => {
-    for (const key of ["fridge_device_id", "fridge_user", "fridge_tracker_household"]) {
-      localStorage.removeItem(key);
-    }
+    // Keep the device profile and its cached copy: logging out only drops the
+    // Clerk session. Wiping the device ID here used to orphan the profile and
+    // hand the person a fresh, empty fridge on every accidental logout.
     try {
       await signOut();
-      window.location.replace(import.meta.env.BASE_URL || "/");
+      toast.success("Uitgelogd — je koelkast blijft staan", {
+        description: "Je kunt hier op elk moment weer inloggen met dezelfde gegevens.",
+      });
     } catch {
       toast.error("Uitloggen is niet gelukt. Probeer het opnieuw.");
     }
@@ -100,8 +120,12 @@ export default function AccountPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <p className="text-base font-semibold text-foreground truncate">{user?.username}</p>
-                  <button onClick={() => { setEditing(true); setNewName(user?.username ?? ""); }} className="text-muted-foreground hover:text-primary transition-colors">
+                  <p className="text-base font-semibold text-foreground truncate">{displayName}</p>
+                  <button
+                    onClick={() => { setEditing(true); setNewName(user?.username ?? ""); }}
+                    aria-label="Naam wijzigen"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
                     <Pencil className="w-4 h-4" />
                   </button>
                 </div>
@@ -111,20 +135,37 @@ export default function AccountPage() {
               </p>
             </div>
           </div>
+
+          {isGuest && (
+            <div className="rounded-2xl bg-secondary/40 p-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Je gebruikt de app als gast. Alles werkt, behalve een huishouden delen — daarvoor
+                heb je een naam nodig.
+              </p>
+              <button
+                onClick={() => { setEditing(true); setNewName(""); }}
+                className="text-xs font-semibold text-primary"
+              >
+                Naam instellen
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Account access and multi-device sign-in */}
         <div className="bg-card border border-border rounded-3xl p-5 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-foreground">Inloggen op een ander apparaat</p>
+            <p className="text-sm font-semibold text-foreground">Account en andere apparaten</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Koppel je profiel aan een account om het veilig terug te halen na uitloggen of op een nieuw apparaat.
+              {clerkUser
+                ? "Je koelkast is aan dit account gekoppeld. Op een ander apparaat log je op dezelfde manier in en staat alles er weer."
+                : "Niet ingelogd. Heb je al een account? Log op dezelfde manier in als eerder en je profiel, huishouden en producten komen terug."}
             </p>
           </div>
           {clerkUser ? (
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-foreground truncate">
-                Ingelogd als {clerkUser.primaryEmailAddress?.emailAddress ?? "account"}
+                Ingelogd als {clerkIdentifier}
               </p>
               <button
                 onClick={handleLogout}
@@ -183,7 +224,11 @@ export default function AccountPage() {
             </div>
           ) : (
             <div className="p-5">
-              <p className="text-sm text-muted-foreground">Geen huishouden gekoppeld.</p>
+              <p className="text-sm text-muted-foreground">
+                {isGuest
+                  ? "Stel eerst een naam in om een huishouden te kunnen aanmaken of je erbij aan te sluiten."
+                  : "Geen huishouden gekoppeld."}
+              </p>
             </div>
           )}
         </div>
@@ -240,7 +285,9 @@ export default function AccountPage() {
               <p className="text-sm font-medium">Dit apparaat resetten?</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Je profiel, apparaat-ID en lokale app-voorkeuren worden verwijderd. Producten en gedeelde boodschappenlijsten blijven bewaard. Als dit apparaat een huishouden heeft gemaakt, blijft dat huishouden bestaan maar wordt de maker-koppeling verwijderd.
+              {clerkUser
+                ? "Je wordt uitgelogd en alle lokale gegevens op dit apparaat worden gewist. Je account, producten en huishouden blijven bewaard: log opnieuw in om ze terug te halen."
+                : "Je profiel, apparaat-ID en lokale app-voorkeuren worden verwijderd. Producten en gedeelde boodschappenlijsten blijven bewaard. Als dit apparaat een huishouden heeft gemaakt, blijft dat huishouden bestaan maar wordt de maker-koppeling verwijderd."}
             </p>
             <div className="flex gap-2">
               <button

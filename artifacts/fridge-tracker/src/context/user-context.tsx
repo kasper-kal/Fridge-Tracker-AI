@@ -21,13 +21,41 @@ export interface UserRecord {
   householdIsCreator?: boolean;
 }
 
+interface ClerkNameSource {
+  fullName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  primaryEmailAddress?: { emailAddress?: string } | null;
+}
+
+/** The name Clerk already knows, used instead of asking for it a second time. */
+export function clerkDisplayName(user: ClerkNameSource | null | undefined): string {
+  if (!user) return "";
+  const full = user.fullName?.trim();
+  if (full) return full.slice(0, 32);
+  const combined = [user.firstName, user.lastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  if (combined) return combined.slice(0, 32);
+  if (user.username?.trim()) return user.username.trim().slice(0, 32);
+  const email = user.primaryEmailAddress?.emailAddress;
+  if (email) return email.split("@")[0].slice(0, 32);
+  return "";
+}
+
 interface UserContextValue {
   deviceId: string;
   user: UserRecord | null;
   isLoading: boolean;
   isRegistered: boolean;
   isBanned: boolean;
-  register: (username: string) => Promise<void>;
+  /** A profile without a name: the app works, sharing does not. */
+  isGuest: boolean;
+  suggestedName: string;
+  register: (username?: string) => Promise<void>;
   updateUsername: (username: string) => Promise<void>;
   deleteCurrentUserData: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -53,6 +81,10 @@ function readCachedUser(): UserRecord | null {
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const { user: clerkUser, isLoaded: isClerkLoaded } = useClerkUser();
+  // Depend on stable primitives: Clerk hands back a new object on session
+  // refreshes, and keying the fetch effect on the object would re-trigger it.
+  const clerkUserId = clerkUser?.id;
+  const clerkName = clerkDisplayName(clerkUser);
   const [deviceId, setDeviceId] = useState<string>(getOrCreateDeviceId);
   const [user, setUserState] = useState<UserRecord | null>(readCachedUser);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,39 +103,43 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const fetchUser = useCallback(async () => {
     try {
       const cachedUser = readCachedUser();
-      const res = clerkUser?.id
-        ? await fetch(apiUrl("/api/users/me"), {
-            headers: { "x-device-id": deviceId },
-            credentials: "include",
-          })
-        : cachedUser
-          ? await fetch(apiUrl("/api/users"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ deviceId, username: cachedUser.username }),
-            })
-          : null;
+      let res: Response | null = null;
 
-      if (res?.ok) {
-        const data = await res.json();
-        saveUser(data);
-        return;
-      }
-
-      if (clerkUser?.id && res?.status === 404 && cachedUser) {
-        const linkResponse = await fetch(apiUrl("/api/users"), {
+      if (clerkUserId) {
+        res = await fetch(apiUrl("/api/users/me"), {
+          headers: { "x-device-id": deviceId },
+          credentials: "include",
+        });
+      } else if (cachedUser) {
+        res = await fetch(apiUrl("/api/users"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ deviceId, username: cachedUser.username }),
         });
-        if (linkResponse.ok) {
-          saveUser(await linkResponse.json());
-        }
+      }
+
+      if (res?.ok) {
+        saveUser(await res.json());
+        return;
+      }
+
+      // Signed in but this account has no profile yet: create it with the name
+      // Clerk already collected, so the setup dialog never asks twice.
+      if (clerkUserId && res?.status === 404) {
+        const createResponse = await fetch(apiUrl("/api/users"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            deviceId,
+            username: clerkName || cachedUser?.username || "",
+          }),
+        });
+        if (createResponse.ok) saveUser(await createResponse.json());
       }
     } catch { /* offline */ }
-  }, [clerkUser?.id, deviceId, saveUser]);
+  }, [clerkUserId, clerkName, deviceId, saveUser]);
 
   useEffect(() => {
     if (!isClerkLoaded) return;
@@ -115,12 +151,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, [fetchUser, isClerkLoaded]);
 
-  const register = useCallback(async (username: string) => {
+  const register = useCallback(async (username?: string) => {
     const res = await fetch(apiUrl("/api/users"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ deviceId, username }),
+      body: JSON.stringify({ deviceId, username: (username ?? "").trim() }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -168,6 +204,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       isLoading,
       isRegistered: !!user,
       isBanned: user?.isBanned ?? false,
+      isGuest: !!user && !(user.username ?? "").trim(),
+      suggestedName: clerkName,
       register,
       updateUsername,
       deleteCurrentUserData,

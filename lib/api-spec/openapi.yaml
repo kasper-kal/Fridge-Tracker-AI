@@ -243,8 +243,21 @@ paths:
           schema:
             type: integer
       responses:
-        "204":
+        "200":
           description: User removed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, signInAccountDeleted]
+                properties:
+                  ok:
+                    type: boolean
+                  signInAccountDeleted:
+                    type: boolean
+                    description: False when the profile was removed but the Clerk sign-in account could not be deleted
+        "400":
+          description: Invalid id, or the caller tried to delete their own account
         "403":
           description: Developer access required
         "404":
@@ -300,7 +313,7 @@ components:
           type: string
         storageLocation:
           type: string
-          enum: [fridge, freezer]
+          enum: [fridge, freezer, pantry]
         createdAt:
           type: string
           format: date-time
@@ -318,7 +331,7 @@ components:
           type: string
         storageLocation:
           type: string
-          enum: [fridge, freezer]
+          enum: [fridge, freezer, pantry]
 
     ProductUpdate:
       type: object
@@ -332,15 +345,17 @@ components:
           type: string
         storageLocation:
           type: string
-          enum: [fridge, freezer]
+          enum: [fridge, freezer, pantry]
 
     ProductsSummary:
       type: object
-      required: [fridge, freezer, total]
+      required: [fridge, freezer, pantry, total]
       properties:
         fridge:
           type: integer
         freezer:
+          type: integer
+        pantry:
           type: integer
         total:
           type: integer

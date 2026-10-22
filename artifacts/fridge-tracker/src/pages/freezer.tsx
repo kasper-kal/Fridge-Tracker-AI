@@ -14,7 +14,7 @@ export default function FreezerPage() {
 
   return (
     <Layout onRefresh={refetch}>
-      <div className="pt-12 pb-4 px-6 bg-gradient-to-b from-primary/5 to-transparent">
+      <div className="pt-12 pb-4 px-6 lg:px-10 lg:pt-10 bg-gradient-to-b from-primary/5 to-transparent">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-foreground">Vriezer</h1>
@@ -30,10 +30,13 @@ export default function FreezerPage() {
             )}
           </div>
           <div className="mt-2 flex items-center gap-1">
-            <Link href="/account">
-              <button className="p-2 rounded-full hover:bg-secondary transition-colors active:scale-95">
-                <UserCircle className="w-6 h-6 text-foreground" />
-              </button>
+            <Link
+              href="/account"
+              aria-label="Account"
+              title="Account"
+              className="inline-flex p-2 rounded-full hover:bg-secondary transition-colors active:scale-95 lg:hidden"
+            >
+              <UserCircle className="w-6 h-6 text-foreground" />
             </Link>
             <HouseholdDialog />
             <ShoppingListDrawer />
@@ -43,7 +46,7 @@ export default function FreezerPage() {
 
       <SummaryStrip />
 
-      <div className="px-6 pb-4">
+      <div className="px-6 pb-4 lg:px-10">
         {isLoading ? (
           <ProductListSkeleton />
         ) : (

@@ -23,7 +23,7 @@ export function OnboardingCard({
           ? `${progressLabel}, ${step} van ${totalSteps}`
           : "Onboarding"
       }
-      className={`w-full max-w-[360px] max-h-[calc(100dvh-2rem)] overflow-y-auto bg-card rounded-3xl ${
+      className={`mx-auto w-full max-w-[360px] max-h-[calc(100dvh-2rem)] overflow-y-auto bg-card rounded-3xl ${
         compact ? "p-4" : "p-5"
       } shadow-2xl border border-border`}
     >

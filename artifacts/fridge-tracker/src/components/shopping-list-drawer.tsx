@@ -60,7 +60,11 @@ export function ShoppingListDrawer() {
   return (
     <Drawer open={open} onOpenChange={handleOpen}>
       <DrawerTrigger asChild>
-        <button className="relative p-2 rounded-full hover:bg-secondary transition-colors active:scale-95">
+        <button
+          aria-label="Boodschappenlijst"
+          title="Boodschappenlijst"
+          className="relative p-2 rounded-full hover:bg-secondary transition-colors active:scale-95"
+        >
           <ShoppingCart className="w-6 h-6 text-foreground" />
           {count > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -70,7 +74,7 @@ export function ShoppingListDrawer() {
         </button>
       </DrawerTrigger>
 
-      <DrawerContent className="max-w-[430px] mx-auto max-h-[85dvh] flex flex-col">
+      <DrawerContent className="max-w-[430px] mx-auto max-h-[85dvh] flex flex-col lg:rounded-3xl lg:bottom-6">
         <DrawerTitle className="sr-only">Boodschappenlijst</DrawerTitle>
 
         {/* Header */}

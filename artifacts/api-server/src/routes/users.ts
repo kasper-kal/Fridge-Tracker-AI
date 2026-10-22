@@ -182,16 +182,15 @@ router.post("/", async (req, res) => {
       return;
     }
 
-    if (!username || typeof username !== "string" || !username.trim()) {
-      res.status(400).json({ error: "Gebruikersnaam vereist" });
-      return;
-    }
+    // A name is optional: people can continue as a guest. Name-gated features
+    // (sharing a household) stay closed until PATCH /users/me sets one.
+    const displayName = typeof username === "string" ? username.trim().slice(0, 32) : "";
 
     const [user] = await db
       .insert(usersTable)
       .values({
         deviceId: normalizedDeviceId,
-        username: username.trim().slice(0, 32),
+        username: displayName,
         ipAddress: ip,
         clerkUserId,
       })
@@ -343,12 +342,26 @@ router.delete("/:id", requireAdmin, async (req, res) => {
       return;
     }
 
+    // Deleting your own profile would also delete the Clerk account you are
+    // signed in with, locking you out of the developer menu for good.
+    const currentClerkUserId = getAuth(req).userId;
+    if (currentClerkUserId && user.clerkUserId === currentClerkUserId) {
+      res.status(400).json({ error: "Je kunt je eigen account niet verwijderen" });
+      return;
+    }
+
+    // Remove the sign-in account first so the person cannot log back in and
+    // recreate the profile. A missing account (404) is already the goal; any
+    // other Clerk failure must not block deleting the local profile.
+    let signInAccountDeleted = true;
     if (user.clerkUserId) {
       try {
         await clerkClient.users.deleteUser(user.clerkUserId);
       } catch (error) {
         const clerkStatus = error as { status?: number; statusCode?: number };
-        if ((clerkStatus.status ?? clerkStatus.statusCode) !== 404) throw error;
+        if ((clerkStatus.status ?? clerkStatus.statusCode) !== 404) {
+          signInAccountDeleted = false;
+        }
       }
     }
 
@@ -359,7 +372,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
         .where(eq(householdsTable.creatorDeviceId, user.deviceId));
       await tx.delete(usersTable).where(eq(usersTable.id, id));
     });
-    res.status(204).send();
+    res.json({ ok: true, signInAccountDeleted });
   } catch {
     res.status(500).json({ error: "Gebruiker verwijderen mislukt" });
   }

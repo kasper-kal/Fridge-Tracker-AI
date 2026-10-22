@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Trash2, Plus, Camera, PenLine, ChevronRight, X, Loader2, Save, Upload, Barcode, Refrigerator, Snowflake, Package } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,11 @@ type View = "menu" | "manual" | "scan" | "barcode";
 type StorageLocation = "fridge" | "freezer" | "pantry";
 
 export function AddModal() {
+  const [path] = useLocation();
+  // The + on the Vriezer page should not offer to add to the fridge first.
+  const routeLocation: StorageLocation =
+    path === "/freezer" ? "freezer" : path === "/pantry" ? "pantry" : "fridge";
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
   const [prefillName, setPrefillName] = useState("");
@@ -49,17 +55,17 @@ export function AddModal() {
   const resetAndClose = (tutorialCompleted = false) => {
     setOpen(false);
     if (!tutorialCompleted) signalTourAction("add-closed");
-    setTimeout(() => { setView("menu"); setPrefillName(""); setPrefillLocation("fridge"); }, 300);
+    setTimeout(() => { setView("menu"); setPrefillName(""); setPrefillLocation(routeLocation); }, 300);
   };
 
-  const goToManual = useCallback((name = "", loc: StorageLocation = "fridge") => {
+  const goToManual = useCallback((name = "", loc: StorageLocation = routeLocation) => {
     setPrefillName(name);
     setPrefillLocation(loc);
     setView("manual");
     if (tutorialActive) {
       signalTourAction(name.trim() ? "add-prefilled" : "add-manual-chosen");
     }
-  }, [tutorialActive]);
+  }, [tutorialActive, routeLocation]);
 
   const selectView = (nextView: View) => {
     setView(nextView);
@@ -94,9 +100,8 @@ export function AddModal() {
           <Plus className="h-7 w-7" />
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="bg-card px-6 pb-safe pt-2 border-t border-card-border rounded-t-3xl h-[85vh] max-h-[800px] outline-none">
+      <DrawerContent className="bg-card px-6 pb-safe lg:pb-6 pt-2 lg:pt-6 border-t border-card-border rounded-t-3xl h-[85vh] max-h-[800px] outline-none lg:inset-x-0 lg:mx-auto lg:w-[560px] lg:rounded-3xl lg:bottom-6 lg:h-auto lg:min-h-0 lg:max-h-[85vh]">
         <DrawerTitle className="sr-only">Item toevoegen</DrawerTitle>
-        <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
 
         {view === "menu" && (
           <MenuView
@@ -140,7 +145,7 @@ function MenuView({
 }) {
   return (
     <>
-      <h2 className="text-2xl font-bold text-card-foreground mb-4">Toevoegen aan voorraad</h2>
+      <h2 className="text-2xl font-bold text-card-foreground mb-4">Item toevoegen</h2>
 
       <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300" data-tour="add-methods">
         <button

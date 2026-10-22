@@ -1,9 +1,11 @@
 import { Link } from "wouter";
 import { ChevronLeft } from "lucide-react";
+import { Layout } from "@/components/layout";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-background px-6 pt-12 pb-16 max-w-[430px] mx-auto">
+    <Layout>
+      <div className="px-6 lg:px-10 pt-12 lg:pt-10 pb-16 max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
         <Link href="/account">
           <button className="p-2 rounded-full hover:bg-secondary transition-colors">
@@ -52,6 +54,7 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground">Heb je vragen over dit privacybeleid? Neem contact op met de beheerder via de app.</p>
         </section>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }

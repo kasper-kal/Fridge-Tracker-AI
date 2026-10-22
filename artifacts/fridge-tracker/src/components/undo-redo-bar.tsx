@@ -15,8 +15,12 @@ export function UndoRedoBar() {
     toast.info("Opnieuw uitgevoerd", { duration: 1500 });
   };
 
+  // Nothing to undo or redo means nothing to offer: the bar used to sit on top
+  // of every page title for the whole session.
+  if (!canUndo && !canRedo) return null;
+
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-lg">
+    <div className="fixed top-3 right-3 lg:right-10 z-[300] flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-lg">
       <button
         onClick={handleUndo}
         disabled={!canUndo}

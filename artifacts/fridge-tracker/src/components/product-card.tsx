@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useLayoutEffect } from "react";
 import { LocalProduct, useProducts } from "@/context/products-context";
 import { useShoppingList } from "@/context/shopping-list-context";
-import { Trash2, Check, X, Plus, Minus, ShoppingCart, Refrigerator, Snowflake, Package } from "lucide-react";
+import { Trash2, Check, X, Plus, Minus, ShoppingCart, Refrigerator, Snowflake, Package, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,9 +40,14 @@ export function ProductCard({ product }: { product: LocalProduct }) {
 
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swiped, setSwiped]           = useState(false);
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
+  const startX      = useRef<number | null>(null);
+  const startY      = useRef<number | null>(null);
+  const startOffset = useRef(0);
+  const pointerId   = useRef<number | null>(null);
   const dragging    = useRef(false);
+  // A drag always ends in a click on the card underneath; without this guard
+  // releasing a swipe would also open the edit form.
+  const ignoreClick = useRef(false);
   const cardFaceRef = useRef<HTMLDivElement>(null);
   const [swipeReveal, setSwipeReveal] = useState(0);
 
@@ -115,47 +120,68 @@ export function ProductCard({ product }: { product: LocalProduct }) {
     toast.success(`${editName} bijgewerkt`);
   }, [product.id, editName, editQuantity, editUnit, updateProduct]);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+  const revealActions = () => {
+    haptic(8);
+    setSwiped(true);
+    setSwipeOffset(-swipeReveal);
+    signalTourAction("swipe");
+  };
+
+  // Pointer events cover touch, pen and mouse, so dragging a card reveals its
+  // actions on a desktop too - where there is no finger to swipe with.
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    startOffset.current = swiped ? -swipeReveal : 0;
+    pointerId.current = e.pointerId;
     dragging.current = false;
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (startX.current === null || startY.current === null) return;
+    if (pointerId.current !== e.pointerId) return;
+
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
 
     if (!dragging.current) {
+      // Mostly vertical: that is the list scrolling, not a swipe.
       if (Math.abs(dy) > Math.abs(dx)) return;
+      if (Math.abs(dx) < 8) return;
       dragging.current = true;
+      ignoreClick.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
     }
 
-    if (dx > 0 && !swiped) return;
-
-      const base   = swiped ? -swipeReveal : 0;
-      const offset = Math.min(0, Math.max(-swipeReveal, base + dx));
+    const offset = Math.min(0, Math.max(-swipeReveal, startOffset.current + dx));
     setSwipeOffset(offset);
   };
 
-  const onTouchEnd = () => {
+  const onPointerEnd = () => {
+    if (startX.current === null) return;
+    startX.current = null;
+    startY.current = null;
+    pointerId.current = null;
     if (!dragging.current) return;
-    if (swiped) {
-      if (swipeOffset > -(swipeReveal - SWIPE_THRESHOLD)) {
-        setSwiped(false); setSwipeOffset(0);
-      } else {
-        setSwiped(true); setSwipeOffset(-swipeReveal);
-      }
-    } else {
-      if (swipeOffset < -SWIPE_THRESHOLD) {
-        haptic(8);
-        setSwiped(true); setSwipeOffset(-swipeReveal);
-        signalTourAction("swipe");
-      } else {
-        setSwiped(false); setSwipeOffset(0);
-      }
-    }
     dragging.current = false;
+
+    if (swipeOffset < -SWIPE_THRESHOLD) {
+      if (!swiped) revealActions();
+      else setSwipeOffset(-swipeReveal);
+    } else if (swiped) {
+      setSwiped(false);
+      setSwipeOffset(0);
+    } else {
+      setSwipeOffset(0);
+    }
+  };
+
+  const swallowDragClick = (e: React.MouseEvent) => {
+    if (!ignoreClick.current) return;
+    ignoreClick.current = false;
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const dateLabel = product.createdAt ? formatDate(product.createdAt) : "";
@@ -195,13 +221,23 @@ export function ProductCard({ product }: { product: LocalProduct }) {
   return (
     <div
       className="relative rounded-2xl overflow-hidden select-none"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      style={{ touchAction: "pan-y" }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerEnd}
+      onPointerCancel={onPointerEnd}
+      onClickCapture={swallowDragClick}
     >
 
-      {/* Swipe action backdrop — 4 buttons */}
-      <div data-testid="swipe-actions" className="absolute inset-0 flex items-stretch">
+      {/* Swipe action backdrop — 4 buttons. Hidden until the card actually moves,
+          otherwise the coloured buttons peek through the rounded corners and
+          paint the card border green and red. */}
+      <div
+        data-testid="swipe-actions"
+        inert={swipeOffset === 0}
+        className="absolute inset-0 flex items-stretch transition-opacity duration-150"
+        style={{ opacity: swipeOffset === 0 ? 0 : 1 }}
+      >
         {/* 1. Boodschappenlijst */}
         <button
           onClick={handleAddToList}
@@ -278,6 +314,18 @@ export function ProductCard({ product }: { product: LocalProduct }) {
           >
             <Plus className="w-4 h-4" />
           </button>
+
+          {!swiped && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); revealActions(); }}
+              aria-label="Acties tonen"
+              title="Acties"
+              className="ml-1 mr-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground [@media(hover:hover)]:flex"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>

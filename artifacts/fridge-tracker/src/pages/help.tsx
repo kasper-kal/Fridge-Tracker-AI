@@ -1,8 +1,9 @@
 import { Link } from "wouter";
+import { Layout } from "@/components/layout";
 import {
   ChevronLeft, Refrigerator, Snowflake, Package, Plus, ShoppingCart,
   Users, UserCircle, Camera, ScanLine, Pencil, Trash2, ArrowLeftRight,
-  Home, QrCode, LogOut, Minus, Search, ArrowUpDown, Share2, Bell, BookOpen
+  Home, QrCode, LogOut, LogIn, Smartphone, Minus, Search, ArrowUpDown, Share2, Bell, BookOpen
 } from "lucide-react";
 
 interface FeatureCardProps {
@@ -85,9 +86,9 @@ function Highlight({ children }: { children: React.ReactNode }) {
 
 export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-background pb-20 max-w-[430px] mx-auto">
+    <Layout>
       {/* Header */}
-      <div className="px-5 pt-12 pb-5 bg-gradient-to-b from-primary/5 to-transparent">
+      <div className="px-5 lg:px-10 pt-12 lg:pt-10 pb-5 bg-gradient-to-b from-primary/5 to-transparent">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/account">
             <button className="p-2 rounded-full hover:bg-secondary transition-colors">
@@ -99,13 +100,13 @@ export default function HelpPage() {
         <p className="text-sm text-muted-foreground">Alles over het gebruik van Koelkast Tracker.</p>
       </div>
 
-      <div className="px-5 space-y-8">
+      <div className="px-5 lg:px-10 pb-20 lg:pb-10 space-y-8 max-w-4xl">
 
         {/* ── QUICK GUIDE ── */}
         <div className="bg-card border border-border rounded-3xl p-5 space-y-3">
           <h2 className="text-base font-bold text-foreground">Welkom bij Koelkast Tracker</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Voeg snel producten toe via de <strong className="text-foreground">+ knop</strong> onderin — handmatig, met de camera, of door een kassabon te scannen. Veeg op een product naar <strong className="text-foreground">links</strong> om het te verplaatsen, op je boodschappenlijst te zetten, of te verwijderen.
+            Voeg snel producten toe via de <strong className="text-foreground">+ knop</strong> — handmatig, met de camera, of door een kassabon te scannen. Veeg op een product naar <strong className="text-foreground">links</strong> om het te verplaatsen, op je boodschappenlijst te zetten, of te verwijderen.
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Deel je voorraad met huisgenoten via <strong className="text-foreground">Huishouden</strong> rechtsbovenin. Maak een huishouden aan met een naam en pincode, en deel die met je gezinsleden zodat jullie samen dezelfde lijst zien.
@@ -434,10 +435,37 @@ export default function HelpPage() {
         />
 
         <FeatureCard
+          icon={<LogIn className="w-5 h-5" />}
+          title="Opnieuw inloggen na uitloggen"
+          description="Je raakt je koelkast niet kwijt door uit te loggen. Je apparaatprofiel blijft bewaard en je profiel is aan je account gekoppeld, dus je kunt altijd opnieuw inloggen."
+          steps={[
+            "Tik op het persoonsicoon linksboven",
+            "Kies 'Inloggen' bij 'Account en andere apparaten'",
+            "Log op dezelfde manier in als eerder",
+            "Je profiel, huishouden en producten komen terug",
+          ]}
+          color="bg-sky-500/10 text-sky-600"
+        />
+
+        <FeatureCard
+          icon={<Smartphone className="w-5 h-5" />}
+          title="Inloggen op een tweede apparaat"
+          description="Op een nieuw apparaat of in een andere browser kies je op het startscherm voor 'Inloggen'. Je hoeft geen nieuw profiel te maken: het bestaande profiel wordt aan dat apparaat gekoppeld."
+          steps={[
+            "Open de app op het nieuwe apparaat",
+            "Kies 'Inloggen' op het startscherm",
+            "Log in met dezelfde gegevens (e-mail of social)",
+            "Je huishouden en voorraad worden automatisch geladen",
+          ]}
+          tip="Zit je in een huishouden, dan zie je op elk apparaat dezelfde gedeelde voorraad."
+          color="bg-emerald-500/10 text-emerald-600"
+        />
+
+        <FeatureCard
           icon={<LogOut className="w-5 h-5" />}
           title="Uitloggen"
-          description="Tik op 'Log uit' onderaan de accountpagina. Let op: dit verwijdert je account van dit apparaat. Je kunt daarna een nieuw account aanmaken."
-          tip="Je producten blijven bewaard in de database als je in een huishouden zit."
+          description="Tik op 'Log uit' op de accountpagina. Je wordt uitgelogd, maar je profiel en je koelkast blijven op dit apparaat staan. Daarna kun je op elk moment weer inloggen."
+          tip="Wil je juist alles van dit apparaat wissen? Gebruik dan 'Apparaat resetten' onderaan de accountpagina."
           color="bg-destructive/10 text-destructive"
         />
 
@@ -446,6 +474,6 @@ export default function HelpPage() {
           <p className="text-xs text-muted-foreground mt-0.5">Heb je nog vragen? Stuur een berichtje via de instellingen.</p>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
