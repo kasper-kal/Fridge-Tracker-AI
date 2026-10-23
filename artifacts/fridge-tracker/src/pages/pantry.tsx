@@ -26,7 +26,7 @@ export default function PantryPage() {
                 </span>
               </div>
             ) : (
-              <p className="text-muted-foreground mt-1 font-medium">Droge waren, blikken en houdbare producten.</p>
+              <p className="text-muted-foreground mt-1 font-medium min-h-12">Droge waren en blikken.</p>
             )}
           </div>
           <div className="mt-2 flex items-center gap-1">
@@ -52,10 +52,10 @@ export default function PantryPage() {
         ) : (
           <ProductList
             products={pantryProducts}
-            emptyIcon={<Package className="w-10 h-10 text-muted-foreground" />}
+            emptyIcon={<Package className="w-10 h-10 text-amber-600" />}
             emptyTitle="Je voorraadkast is leeg"
             emptyMessage="Bewaar hier droge waren, blikken en andere houdbare producten."
-            accentColor="text-primary"
+            accentBg="bg-amber-500/10"
           />
         )}
       </div>

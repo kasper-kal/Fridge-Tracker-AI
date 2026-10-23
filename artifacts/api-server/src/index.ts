@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startDeletionRetention } from "./lib/retention";
 import { pool } from "@workspace/db";
 
 // Every statement stands on its own: one failure (an older table missing a
@@ -82,5 +83,8 @@ runMigrations().then(() => {
       process.exit(1);
     }
     logger.info({ port }, "Server listening");
+    // Deleting only marks a product, so something has to clear out the ones
+    // that have been on the Verwijderd page for longer than a week.
+    startDeletionRetention();
   });
 });

@@ -29,6 +29,7 @@ import PantryPage from "@/pages/pantry";
 import AccountPage from "@/pages/account";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
+import DeletedPage from "@/pages/deleted";
 import HelpPage from "@/pages/help";
 
 const queryClient = new QueryClient({
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/account" component={AccountPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/deleted" component={DeletedPage} />
       <Route path="/help" component={HelpPage} />
       <Route component={NotFound} />
     </Switch>
@@ -230,7 +232,9 @@ function AppInner() {
         }
       />
       {!onboardingPhase && <UndoRedoBar />}
-      {!onboardingPhase && <Toaster position="top-center" />}
+      {!onboardingPhase && (
+        <Toaster position="top-center" offset={{ top: "12px" }} mobileOffset={{ top: "12px" }} />
+      )}
       {phase === "done" && <CookieBanner />}
       <DeveloperPanel />
 

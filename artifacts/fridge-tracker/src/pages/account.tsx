@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useClerk, useUser as useClerkUser } from "@clerk/react";
-import { User, Pencil, Check, X, Home, FileText, Shield, ChevronRight, LogOut, AlertTriangle, BookOpen, RotateCcw } from "lucide-react";
+import { User, Pencil, Check, X, Home, FileText, Shield, ChevronRight, LogOut, AlertTriangle, BookOpen, RotateCcw, Archive } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useUser } from "@/context/user-context";
 import { useHousehold } from "@/context/household-context";
@@ -93,7 +93,9 @@ export default function AccountPage() {
         <p className="text-muted-foreground mt-1 font-medium">Jouw profiel en instellingen</p>
       </div>
 
-      <div className="px-6 pb-32 space-y-4 mt-2">
+      {/* The scroll area already reserves the bottom bar's height (main pb-24), so
+          adding more here only made the page scroll into empty space. */}
+      <div className="px-6 pb-2 space-y-4 mt-2">
         {/* Profile card */}
         <div className="bg-card border border-border rounded-3xl p-5 space-y-4">
           <div className="flex items-center gap-4">
@@ -124,7 +126,7 @@ export default function AccountPage() {
                   <button
                     onClick={() => { setEditing(true); setNewName(user?.username ?? ""); }}
                     aria-label="Naam wijzigen"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="p-1 -m-1 rounded-full text-muted-foreground hover:text-primary transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -235,6 +237,13 @@ export default function AccountPage() {
 
         {/* Links */}
         <div className="bg-card border border-border rounded-3xl overflow-hidden divide-y divide-border">
+          <Link href="/deleted">
+            <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-secondary/30 transition-colors">
+              <Archive className="w-5 h-5 text-muted-foreground" />
+              <span className="flex-1 text-sm font-medium text-left">Verwijderde producten</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </Link>
           <Link href="/help">
             <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-secondary/30 transition-colors">
               <BookOpen className="w-5 h-5 text-muted-foreground" />

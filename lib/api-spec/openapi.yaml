@@ -97,7 +97,7 @@ paths:
     delete:
       operationId: deleteProduct
       tags: [products]
-      summary: Delete a product
+      summary: Delete a product (kept on the deleted list for a week)
       parameters:
         - name: id
           in: path
@@ -106,7 +106,58 @@ paths:
             type: integer
       responses:
         "204":
-          description: Deleted
+          description: Moved to the deleted list; removed for good after seven days
+
+  /products/{id}/permanent:
+    delete:
+      operationId: purgeProduct
+      tags: [products]
+      summary: Remove a product for good, skipping the deleted list
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  /products/deleted:
+    get:
+      operationId: listDeletedProducts
+      tags: [products]
+      summary: List deleted products, newest deletion first (kept for seven days)
+      responses:
+        "200":
+          description: Deleted products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{id}/restore:
+    post:
+      operationId: restoreProduct
+      tags: [products]
+      summary: Put a deleted product back
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
 
   /products/summary:
     get:
@@ -317,6 +368,11 @@ components:
         createdAt:
           type: string
           format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the product was deleted. Products deleted more than seven days ago are removed automatically.
 
     ProductInput:
       type: object

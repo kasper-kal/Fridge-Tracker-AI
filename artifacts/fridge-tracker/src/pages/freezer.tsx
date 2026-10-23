@@ -26,7 +26,7 @@ export default function FreezerPage() {
                 </span>
               </div>
             ) : (
-              <p className="text-muted-foreground mt-1 font-medium">Overzicht van je diepvries.</p>
+              <p className="text-muted-foreground mt-1 font-medium min-h-12">Overzicht van je diepvries.</p>
             )}
           </div>
           <div className="mt-2 flex items-center gap-1">
@@ -52,10 +52,10 @@ export default function FreezerPage() {
         ) : (
           <ProductList
             products={freezerProducts}
-            emptyIcon={<Snowflake className="w-10 h-10 text-muted-foreground" />}
+            emptyIcon={<Snowflake className="w-10 h-10 text-indigo-600" />}
             emptyTitle="Je vriezer is leeg"
             emptyMessage="Bewaar hier producten voor de lange termijn. Tik op + om toe te voegen."
-            accentColor="text-primary"
+            accentBg="bg-indigo-500/10"
           />
         )}
       </div>

@@ -20,7 +20,7 @@ export const HealthCheckResponse = zod.object({
  * @summary List all products
  */
 export const ListProductsQueryParams = zod.object({
-  "location": zod.enum(['fridge', 'freezer', 'pantry']).optional()
+  "location": zod.enum(['fridge', 'freezer']).optional()
 })
 
 export const ListProductsResponseItem = zod.object({
@@ -29,7 +29,8 @@ export const ListProductsResponseItem = zod.object({
   "quantity": zod.number(),
   "unit": zod.string(),
   "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "deletedAt": zod.coerce.date().nullish()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -71,15 +72,57 @@ export const UpdateProductResponse = zod.object({
   "quantity": zod.number(),
   "unit": zod.string(),
   "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "deletedAt": zod.coerce.date().nullish()
 })
 
 
 /**
- * @summary Delete a product
+ * @summary Delete a product (kept on the deleted list unless permanent)
  */
 export const DeleteProductParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Remove a product for good, skipping the deleted list
+ */
+export const PurgeProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List deleted products, newest deletion first
+ */
+export const ListDeletedProductsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "quantity": zod.number(),
+  "unit": zod.string(),
+  "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']),
+  "createdAt": zod.coerce.date(),
+  "deletedAt": zod.coerce.date().nullish()
+})
+export const ListDeletedProductsResponse = zod.array(ListDeletedProductsResponseItem)
+
+
+/**
+ * @summary Put a deleted product back
+ */
+export const RestoreProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreProductResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "quantity": zod.number(),
+  "unit": zod.string(),
+  "storageLocation": zod.enum(['fridge', 'freezer', 'pantry']),
+  "createdAt": zod.coerce.date(),
+  "deletedAt": zod.coerce.date().nullish()
 })
 
 
@@ -186,6 +229,11 @@ export const GetCurrentUserAdminStatusResponse = zod.object({
  */
 export const DeleteUserParams = zod.object({
   "id": zod.coerce.number()
+})
+
+export const DeleteUserResponse = zod.object({
+  "ok": zod.boolean(),
+  "signInAccountDeleted": zod.boolean().describe('False when the profile was removed but the Clerk sign-in account could not be deleted')
 })
 
 

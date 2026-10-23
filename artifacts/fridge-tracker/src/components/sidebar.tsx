@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { Refrigerator, Package, Snowflake, Plus, UserCircle, HelpCircle } from "lucide-react";
+import { Refrigerator, Package, Snowflake, Plus, UserCircle, HelpCircle, Archive } from "lucide-react";
 import { signalTourAction } from "./tour";
 import { useProducts } from "@/context/products-context";
 
+// Same location colours as the phone nav, the count tiles and the swipe row.
 const TABS = [
-  { path: "/", label: "Koelkast", Icon: Refrigerator },
-  { path: "/pantry", label: "Voorraad", Icon: Package },
-  { path: "/freezer", label: "Vriezer", Icon: Snowflake },
+  { path: "/", label: "Koelkast", Icon: Refrigerator, active: "bg-sky-500/10 text-sky-700" },
+  { path: "/pantry", label: "Voorraad", Icon: Package, active: "bg-amber-500/10 text-amber-700" },
+  { path: "/freezer", label: "Vriezer", Icon: Snowflake, active: "bg-indigo-500/10 text-indigo-700" },
 ];
 
 /**
@@ -48,7 +49,7 @@ export function Sidebar() {
       </button>
 
       <nav className="mt-6 flex flex-col gap-1" data-tour="bottom-nav-tabs">
-        {TABS.map(({ path, label, Icon }) => {
+        {TABS.map(({ path, label, Icon, active: activeTone }) => {
           const active = location === path;
           return (
             <Link
@@ -56,14 +57,14 @@ export function Sidebar() {
               href={path}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-primary/10 text-primary"
+                  ? activeTone
                   : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
               }`}
             >
               <Icon className="h-4 w-4" />
               <span className="flex-1">{label}</span>
               <span
-                className={`text-xs tabular-nums ${active ? "text-primary" : "text-muted-foreground"}`}
+                className={`text-xs tabular-nums ${active ? "" : "text-muted-foreground"}`}
               >
                 {count(path)}
               </span>
@@ -83,6 +84,17 @@ export function Sidebar() {
         >
           <UserCircle className="h-4 w-4" />
           Account
+        </Link>
+        <Link
+          href="/deleted"
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+            location === "/deleted"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+          }`}
+        >
+          <Archive className="h-4 w-4" />
+          Verwijderd
         </Link>
         <Link
           href="/help"

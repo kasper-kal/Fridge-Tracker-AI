@@ -15,6 +15,7 @@ export type ProductStorageLocation = typeof ProductStorageLocation[keyof typeof 
 export const ProductStorageLocation = {
   fridge: 'fridge',
   freezer: 'freezer',
+  pantry: 'pantry',
 } as const;
 
 export interface Product {
@@ -24,6 +25,7 @@ export interface Product {
   unit: string;
   storageLocation: ProductStorageLocation;
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 export type ProductInputStorageLocation = typeof ProductInputStorageLocation[keyof typeof ProductInputStorageLocation];
@@ -32,6 +34,7 @@ export type ProductInputStorageLocation = typeof ProductInputStorageLocation[key
 export const ProductInputStorageLocation = {
   fridge: 'fridge',
   freezer: 'freezer',
+  pantry: 'pantry',
 } as const;
 
 export interface ProductInput {
@@ -48,6 +51,7 @@ export type ProductUpdateStorageLocation = typeof ProductUpdateStorageLocation[k
 export const ProductUpdateStorageLocation = {
   fridge: 'fridge',
   freezer: 'freezer',
+  pantry: 'pantry',
 } as const;
 
 export interface ProductUpdate {
@@ -61,6 +65,7 @@ export interface ProductUpdate {
 export interface ProductsSummary {
   fridge: number;
   freezer: number;
+  pantry: number;
   total: number;
 }
 
@@ -112,4 +117,10 @@ export const ListProductsLocation = {
   fridge: 'fridge',
   freezer: 'freezer',
 } as const;
+
+export type DeleteUser200 = {
+  ok: boolean;
+  /** False when the profile was removed but the Clerk sign-in account could not be deleted */
+  signInAccountDeleted: boolean;
+};
 

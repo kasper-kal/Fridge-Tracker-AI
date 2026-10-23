@@ -14,4 +14,5 @@ export interface Product {
   unit: string;
   storageLocation: ProductStorageLocation;
   createdAt: Date;
+  deletedAt?: Date | null;
 }

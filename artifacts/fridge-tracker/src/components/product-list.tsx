@@ -48,10 +48,17 @@ interface ProductListProps {
   emptyIcon: React.ReactNode;
   emptyTitle: string;
   emptyMessage: string;
-  accentColor?: string;
+  /** Tint behind the empty-state icon: the location's own colour. */
+  accentBg?: string;
 }
 
-export function ProductList({ products, emptyIcon, emptyTitle, emptyMessage, accentColor = "text-primary" }: ProductListProps) {
+export function ProductList({
+  products,
+  emptyIcon,
+  emptyTitle,
+  emptyMessage,
+  accentBg = "bg-secondary/50",
+}: ProductListProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("nieuwste");
   const [sortOpen, setSortOpen] = useState(false);
@@ -71,7 +78,7 @@ export function ProductList({ products, emptyIcon, emptyTitle, emptyMessage, acc
         data-tour="product-list"
         className="mx-auto flex w-full max-w-2xl flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-card/40 py-16 px-4 text-center animate-in fade-in duration-500 lg:py-24"
       >
-        <div className="w-20 h-20 bg-secondary/50 rounded-full flex items-center justify-center mb-6">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${accentBg}`}>
           {emptyIcon}
         </div>
         <h3 className="text-xl font-semibold mb-2">{emptyTitle}</h3>

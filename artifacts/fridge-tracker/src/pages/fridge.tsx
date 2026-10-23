@@ -26,7 +26,7 @@ export default function FridgePage() {
                 </span>
               </div>
             ) : (
-              <p className="text-muted-foreground mt-1 font-medium">Houd je verse producten bij.</p>
+              <p className="text-muted-foreground mt-1 font-medium min-h-12">Houd je verse producten bij.</p>
             )}
           </div>
           <div className="mt-2 flex items-center gap-1">
@@ -53,9 +53,10 @@ export default function FridgePage() {
         ) : (
           <ProductList
             products={fridgeProducts}
-            emptyIcon={<Refrigerator className="w-10 h-10 text-muted-foreground" />}
+            emptyIcon={<Refrigerator className="w-10 h-10 text-sky-600" />}
             emptyTitle="Je koelkast is leeg"
             emptyMessage="Tik op de + om je eerste product toe te voegen."
+            accentBg="bg-sky-500/10"
           />
         )}
       </div>

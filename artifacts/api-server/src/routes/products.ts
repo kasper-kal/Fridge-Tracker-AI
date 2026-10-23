@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, productsTable } from "@workspace/db";
-import { eq, sql, and, isNull } from "drizzle-orm";
+import { eq, sql, and, isNull, isNotNull, desc } from "drizzle-orm";
 import {
   ListProductsQueryParams,
   CreateProductBody,
@@ -19,7 +19,15 @@ function mapProduct(p: typeof productsTable.$inferSelect) {
     unit: p.unit,
     storageLocation: p.storageLocation,
     createdAt: p.createdAt.toISOString(),
+    deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
   };
+}
+
+/** A list is one household's products, or the ungrouped ones. */
+function listScope(householdId: number | undefined) {
+  return householdId
+    ? eq(productsTable.householdId, householdId)
+    : isNull(productsTable.householdId);
 }
 
 // GET /products
@@ -29,18 +37,13 @@ router.get("/", async (req, res) => {
     const location = query.success ? query.data.location : undefined;
     const householdId = req.query.householdId ? Number(req.query.householdId) : undefined;
 
-    const conditions = [];
+    const conditions = [listScope(householdId), isNull(productsTable.deletedAt)];
     if (location) conditions.push(eq(productsTable.storageLocation, location));
-    if (householdId) {
-      conditions.push(eq(productsTable.householdId, householdId));
-    } else {
-      conditions.push(isNull(productsTable.householdId));
-    }
 
     const products = await db
       .select()
       .from(productsTable)
-      .where(conditions.length === 1 ? conditions[0] : and(...conditions));
+      .where(and(...conditions));
 
     res.json(products.map(mapProduct));
   } catch {
@@ -104,14 +107,67 @@ router.patch("/:id", async (req, res) => {
 });
 
 // DELETE /products/:id
+// Marks the row instead of removing it, so it can still be found on the
+// Verwijderd page and put back from there.
 router.delete("/:id", async (req, res) => {
   try {
     const params = DeleteProductParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
-    await db.delete(productsTable).where(eq(productsTable.id, params.data.id));
+    await db
+      .update(productsTable)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(productsTable.id, params.data.id), isNull(productsTable.deletedAt)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
+// DELETE /products/:id/permanent
+// Skips the Verwijderd page and removes the row for good. The audits use it so
+// their seeded rows cannot pile up in the owner's list.
+router.delete("/:id/permanent", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    await db.delete(productsTable).where(eq(productsTable.id, id));
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ error: "Failed to remove product" });
+  }
+});
+
+// GET /products/deleted
+// Newest deletion first. Scoped like the normal list: a household sees its own
+// deleted products, and ungrouped devices see the ungrouped ones.
+router.get("/deleted", async (req, res) => {
+  try {
+    const householdId = req.query.householdId ? Number(req.query.householdId) : undefined;
+    const products = await db
+      .select()
+      .from(productsTable)
+      .where(and(listScope(householdId), isNotNull(productsTable.deletedAt)))
+      .orderBy(desc(productsTable.deletedAt));
+    res.json(products.map(mapProduct));
+  } catch {
+    res.status(500).json({ error: "Failed to fetch deleted products" });
+  }
+});
+
+// POST /products/:id/restore
+router.post("/:id/restore", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const [product] = await db
+      .update(productsTable)
+      .set({ deletedAt: null })
+      .where(and(eq(productsTable.id, id), isNotNull(productsTable.deletedAt)))
+      .returning();
+    if (!product) { res.status(404).json({ error: "Product not found" }); return; }
+    res.json(mapProduct(product));
+  } catch {
+    res.status(500).json({ error: "Failed to restore product" });
   }
 });
 
@@ -119,17 +175,13 @@ router.delete("/:id", async (req, res) => {
 router.get("/summary", async (req, res) => {
   try {
     const householdId = req.query.householdId ? Number(req.query.householdId) : undefined;
-    const condition = householdId
-      ? eq(productsTable.householdId, householdId)
-      : isNull(productsTable.householdId);
-
     const rows = await db
       .select({
         location: productsTable.storageLocation,
         count: sql<number>`count(*)::int`,
       })
       .from(productsTable)
-      .where(condition)
+      .where(and(listScope(householdId), isNull(productsTable.deletedAt)))
       .groupBy(productsTable.storageLocation);
 
     const fridge = rows.find((r) => r.location === "fridge")?.count ?? 0;

@@ -52,3 +52,12 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local Playwright install used by scripts/audit (not a workspace dependency)
+node_modules_pw_tmp/
+
+# Screenshots produced by the audits
+artifacts/audit/
+
+# Dev-server and API logs
+.logs/

@@ -1,0 +1,123 @@
+{
+  "$comment": "The register behind scripts/audit. Every entry that silences a finding must carry a reason; an exemption without one is not read by the audit. An undocumented width or a fresh exemption is a conversation, not a wall: the answer is the reason, written here.",
+  "modes": {
+    "phone": "below 768px - the app shell is a single column with a bottom bar",
+    "tablet": "768px to 1023px - same single column, but the shell gets its own edge and a backdrop",
+    "desktop": "1024px and up - the sidebar replaces the bottom bar and the shell goes edge to edge"
+  },
+  "classMarkers": [
+    {
+      "pattern": "^lucide",
+      "reason": "lucide-react stamps the glyph name on the svg as a class. It is a marker for the icon, not a style hook; the glyph's rules are its size and stroke classes."
+    },
+    {
+      "pattern": "^group$",
+      "reason": "Tailwind marker consumed by group-* variants. It is meant to have no rule of its own."
+    },
+    {
+      "pattern": "^peer$",
+      "reason": "Tailwind marker consumed by peer-* variants. It is meant to have no rule of its own."
+    },
+    {
+      "pattern": "^dark$",
+      "reason": "The appearance class on <html>. The rules live in the .dark custom properties, not in a .dark component rule."
+    },
+    {
+      "pattern": "^light$",
+      "reason": "Appearance marker set by the audit next to .dark; carries no rules by design."
+    },
+    {
+      "pattern": "^radix-",
+      "reason": "Radix UI state markers (radix-state-*, radix-side-*). Consumed by attribute selectors, not class rules."
+    }
+  ],
+  "breakpoints": [
+    {
+      "min": 600,
+      "max": true,
+      "reason": "Sonner (the toast library) injects its own mobile breakpoint at runtime for the toast container. Third-party stylesheet, not an app layout width."
+    },
+    {
+      "min": 768,
+      "reason": "tablet: index.css gives the phone column its own edge, a 640px shell width and a page backdrop; md: utilities follow Tailwind's default scale."
+    },
+    {
+      "min": 1024,
+      "reason": "desktop: the sidebar replaces the bottom bar and the shell grows to the full width (index.css, sidebar.tsx, layout.tsx). lg: utilities follow the same 1024px."
+    },
+    {
+      "min": 1023.98,
+      "max": true,
+      "reason": "the lower half of the same 1024px edge, one device pixel short of it: .pb-safe stops applying exactly where lg: utilities begin, so safe-area padding and lg:pb-6 never fight. A fencepost of 1024, not a fourth mode."
+    }
+  ],
+  "exemptions": {
+    "contrast": [
+      {
+        "match": "dark/",
+        "reason": "The product ships a full .dark palette in index.css but there is no control that switches to it, so no user can reach these screens. Dark is still measured and the count is printed in the info line; it is not enforced until a control exists."
+      },
+      {
+        "match": "voorwaarden :: top row",
+        "reason": "The legal pages keep a narrower reading column (max-w-3xl) than the app screens once the sidebar is up, so long text is readable. A deliberate measure for prose, not a stray padding."
+      },
+      {
+        "match": "privacy :: top row",
+        "reason": "The legal pages keep a narrower reading column (max-w-3xl) than the app screens once the sidebar is up, so long text is readable. A deliberate measure for prose, not a stray padding."
+      },
+      {
+        "match": "uitleg :: <span.text-[9px].text-white.font-bold>",
+        "reason": "The help page draws the four real swipe tiles at the colours the product really uses (emerald/sky/indigo/amber-500, destructive red). White 9px labels on those fills measure 2.15-3.82:1. Darkening only the drawing would make the instructions show tiles the app does not have, so the trade-off is recorded rather than painted away; changing the product's own tiles is the owner's call (docs/DECISIONS.md, 2026-10-23)."
+      },
+      {
+        "match": "+veegacties :: <button",
+        "reason": "The four swipe tiles wear the owner's own colours (emerald/sky/indigo-500, destructive red) at white 10px labels, which measure 2.15-3.61:1. They were darkened once for AA and the owner rejected that: the palette is not the agent's to redraw (docs/DECISIONS.md, 2026-10-23). Registered as an accepted trade-off, not fixed; a label treatment that keeps these fills is the owner's call."
+      },
+      {
+        "match": "verwijderd :: top row",
+        "reason": "The deleted list keeps the same narrower reading column (max-w-3xl) as the legal pages, so a column of short rows does not stretch across a monitor. A deliberate measure, not a stray padding."
+      }
+    ],
+    "targets": [],
+    "icons": [],
+    "consistency": [
+      {
+        "match": "label:account",
+        "reason": "Navigation destination, drawn by whichever nav surface the mode has: an icon link in the phone header (the bottom bar only has the three storage tabs), a row in the desktop sidebar. Same destination, one surface per mode."
+      },
+      {
+        "match": "label:koelkast",
+        "reason": "Navigation destination: bottom-bar tab on phones, sidebar row on desktop, and the swipe tile that moves a product INTO the fridge. The tile is an action on a product, not the destination."
+      },
+      {
+        "match": "label:voorraad",
+        "reason": "Navigation destination: bottom-bar tab on phones, sidebar row on desktop, plus the swipe tile that moves a product into the pantry."
+      },
+      {
+        "match": "label:vriezer",
+        "reason": "Navigation destination: bottom-bar tab on phones, sidebar row on desktop, plus the swipe tile that moves a product into the freezer."
+      },
+      {
+        "match": "label:uitleg",
+        "reason": "Only reachable from the desktop sidebar (the phone header has Account only); the second shape is the same row in its active state."
+      },
+      {
+        "match": "label:product toevoegen",
+        "reason": "One action, two deliberate shapes per mode: a round floating button on phones (where the bottom bar owns the space) and a labelled button in the desktop sidebar."
+      },
+      {
+        "match": "glyph:shopping-cart",
+        "reason": "The drawer is called Boodschappenlijst and the 64px swipe tile says Lijst - the short form for a tile that cannot hold the full word at 10px. Same glyph and colour, so the action is still one action."
+      },
+      {
+        "match": "glyph:refrigerator",
+        "reason": "The refrigerator glyph is also the brand lockup (Koelkast Tracker) in the sidebar. The logo is not changed without an explicit request."
+      },
+      {
+        "match": "label:verwijderd",
+        "reason": "Only reachable from the desktop sidebar (the phone header has Account only); the second shape is the same row in its active state."
+      }
+    ],
+    "wording": []
+  }
+}

@@ -9,5 +9,6 @@
 export interface ProductsSummary {
   fridge: number;
   freezer: number;
+  pantry: number;
   total: number;
 }

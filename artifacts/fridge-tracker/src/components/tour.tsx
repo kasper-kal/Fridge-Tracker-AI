@@ -125,8 +125,24 @@ interface TourStep {
   tooltipTop?: boolean;
 }
 
+/**
+ * The first match that is actually on screen. The + button exists twice - once
+ * in the desktop sidebar, once above the phone tab bar - and the copy for the
+ * other screen size measures 0x0. Taking the first match blindly pointed the
+ * tour at the hidden one and reported the + as "not visible" on a phone.
+ */
+function findTarget(selector: string): Element | null {
+  for (const el of document.querySelectorAll(selector)) {
+    const b = el.getBoundingClientRect();
+    if (b.width === 0 && b.height === 0) continue;
+    if (window.getComputedStyle(el).visibility === "hidden") continue;
+    return el;
+  }
+  return null;
+}
+
 function measure(selector: string, pad: number): Rect | null {
-  const el = document.querySelector(selector);
+  const el = findTarget(selector);
   if (!el) return null;
   const b = el.getBoundingClientRect();
   if (b.width === 0 && b.height === 0) return null;
@@ -184,7 +200,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
     setVisible(false);
     setHasMeasured(false);
     const run = () => {
-      const target = document.querySelector(current.target);
+      const target = findTarget(current.target);
       const nextRect = target ? measure(current.target, current.pad) : null;
       setHasMeasured(true);
       setTargetFound(!!nextRect);
@@ -226,7 +242,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
     const resizeObserver = new ResizeObserver(scheduleRun);
     const observeTarget = () => {
       resizeObserver.disconnect();
-      const target = document.querySelector(current.target);
+      const target = findTarget(current.target);
       if (target) resizeObserver.observe(target);
       scheduleRun();
     };
@@ -306,7 +322,7 @@ export function TourOverlay({ onDone, mode }: { onDone: () => void; mode: TourMo
       if (r) {
         setRect(r);
         setTargetFound(true);
-        const target = document.querySelector(current.target);
+        const target = findTarget(current.target);
         if (target) {
           const bounds = target.getBoundingClientRect();
           setTargetInView(

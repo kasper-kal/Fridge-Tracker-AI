@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 export default function PrivacyPage() {
   return (
     <Layout>
-      <div className="px-6 lg:px-10 pt-12 lg:pt-10 pb-16 max-w-3xl">
+      <div className="px-6 lg:px-10 pt-12 lg:pt-10 pb-2 max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
         <Link href="/account">
           <button className="p-2 rounded-full hover:bg-secondary transition-colors">

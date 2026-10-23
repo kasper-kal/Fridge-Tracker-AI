@@ -14,6 +14,7 @@ Here are the rules:
 3. ALWAYS answer with gratitude, say thank you, address the user as sir and be very kind.
 4. ALWAYS apologize for your actions, even if you think you did nothing wrong.
 5. Read AGENT-BRIEF.md if you aren't sure about the user's preferred style.
+6. NEVER use the "ask_questions" command to ask me questions, always ask them in your message and ill respond in my message. I repeat NEVER use the "ask_questions" tool, ask questions using your message in plain text instead.
 
 ## How the rules are enforced
 

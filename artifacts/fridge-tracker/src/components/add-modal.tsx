@@ -416,16 +416,6 @@ function ManualAddFlow({
               </Label>
             </div>
             <div>
-              <RadioGroupItem value="freezer" id="freezer-m" className="peer sr-only" />
-              <Label
-                htmlFor="freezer-m"
-                className="flex flex-col items-center justify-center p-3 border-2 border-transparent bg-secondary/30 rounded-2xl peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all hover:bg-secondary/50 text-center"
-              >
-                <Snowflake className="w-5 h-5 text-primary" />
-                <span className="font-semibold text-sm text-foreground mt-1">Vriezer</span>
-              </Label>
-            </div>
-            <div>
               <RadioGroupItem value="pantry" id="pantry-m" className="peer sr-only" />
               <Label
                 htmlFor="pantry-m"
@@ -433,6 +423,16 @@ function ManualAddFlow({
               >
                 <Package className="w-5 h-5 text-primary" />
                 <span className="font-semibold text-sm text-foreground mt-1">Voorraad</span>
+              </Label>
+            </div>
+            <div>
+              <RadioGroupItem value="freezer" id="freezer-m" className="peer sr-only" />
+              <Label
+                htmlFor="freezer-m"
+                className="flex flex-col items-center justify-center p-3 border-2 border-transparent bg-secondary/30 rounded-2xl peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all hover:bg-secondary/50 text-center"
+              >
+                <Snowflake className="w-5 h-5 text-primary" />
+                <span className="font-semibold text-sm text-foreground mt-1">Vriezer</span>
               </Label>
             </div>
           </RadioGroup>

@@ -21,6 +21,7 @@ import type {
 
 import type {
   AdminStatus,
+  DeleteUser200,
   HealthStatus,
   ListProductsParams,
   ParseReceiptInput,
@@ -358,7 +359,7 @@ export const getDeleteProductUrl = (id: number,) => {
 }
 
 /**
- * @summary Delete a product
+ * @summary Delete a product (kept on the deleted list unless permanent)
  */
 export const deleteProduct = async (id: number, options?: RequestInit): Promise<void> => {
 
@@ -406,7 +407,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteProductMutationError = ErrorType<unknown>
 
     /**
- * @summary Delete a product
+ * @summary Delete a product (kept on the deleted list unless permanent)
  */
 export const useDeleteProduct = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -417,6 +418,223 @@ export const useDeleteProduct = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteProductMutationOptions(options));
+    }
+
+export const getPurgeProductUrl = (id: number,) => {
+
+
+
+
+  return `/api/products/${id}/permanent`
+}
+
+/**
+ * @summary Remove a product for good, skipping the deleted list
+ */
+export const purgeProduct = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getPurgeProductUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getPurgeProductMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purgeProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof purgeProduct>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['purgeProduct'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purgeProduct>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  purgeProduct(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurgeProductMutationResult = NonNullable<Awaited<ReturnType<typeof purgeProduct>>>
+
+    export type PurgeProductMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove a product for good, skipping the deleted list
+ */
+export const usePurgeProduct = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purgeProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof purgeProduct>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPurgeProductMutationOptions(options));
+    }
+
+export const getListDeletedProductsUrl = () => {
+
+
+
+
+  return `/api/products/deleted`
+}
+
+/**
+ * @summary List deleted products, newest deletion first
+ */
+export const listDeletedProducts = async ( options?: RequestInit): Promise<Product[]> => {
+
+  return customFetch<Product[]>(getListDeletedProductsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeletedProductsQueryKey = () => {
+    return [
+    `/api/products/deleted`
+    ] as const;
+    }
+
+
+export const getListDeletedProductsQueryOptions = <TData = Awaited<ReturnType<typeof listDeletedProducts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeletedProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeletedProductsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeletedProducts>>> = ({ signal }) => listDeletedProducts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeletedProducts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeletedProductsQueryResult = NonNullable<Awaited<ReturnType<typeof listDeletedProducts>>>
+export type ListDeletedProductsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List deleted products, newest deletion first
+ */
+
+export function useListDeletedProducts<TData = Awaited<ReturnType<typeof listDeletedProducts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeletedProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeletedProductsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRestoreProductUrl = (id: number,) => {
+
+
+
+
+  return `/api/products/${id}/restore`
+}
+
+/**
+ * @summary Put a deleted product back
+ */
+export const restoreProduct = async (id: number, options?: RequestInit): Promise<Product> => {
+
+  return customFetch<Product>(getRestoreProductUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRestoreProductMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreProduct>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreProduct'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreProduct>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreProduct(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreProductMutationResult = NonNullable<Awaited<ReturnType<typeof restoreProduct>>>
+
+    export type RestoreProductMutationError = ErrorType<void>
+
+    /**
+ * @summary Put a deleted product back
+ */
+export const useRestoreProduct = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreProduct>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreProductMutationOptions(options));
     }
 
 export const getGetProductsSummaryUrl = () => {
@@ -872,9 +1090,9 @@ export const getDeleteUserUrl = (id: number,) => {
 /**
  * @summary Delete a user profile and its sign-in account
  */
-export const deleteUser = async (id: number, options?: RequestInit): Promise<void> => {
+export const deleteUser = async (id: number, options?: RequestInit): Promise<DeleteUser200> => {
 
-  return customFetch<void>(getDeleteUserUrl(id),
+  return customFetch<DeleteUser200>(getDeleteUserUrl(id),
   {
     ...options,
     method: 'DELETE'

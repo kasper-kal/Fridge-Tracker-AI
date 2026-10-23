@@ -29,6 +29,11 @@ const PRODUCTS = [
   { name: "Koffiebonen", quantity: 500, unit: "g", storageLocation: "pantry" },
 ];
 
+// The fridge is one shared list, not a per-device one, so every row this script
+// creates is filmed once and deleted again at the end. Demo food left behind is
+// demo food the owner sees on their own screen.
+const seededProductIds = [];
+
 async function seed() {
   const res = await fetch(`${API}/users`, {
     method: "POST",
@@ -39,13 +44,25 @@ async function seed() {
   const existing = await (await fetch(`${API}/products`)).json();
   if (Array.isArray(existing) && existing.length > 0) return user;
   for (const p of PRODUCTS) {
-    await fetch(`${API}/products`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-device-id": DEVICE_ID },
-      body: JSON.stringify(p),
-    });
+    const created = await (
+      await fetch(`${API}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-device-id": DEVICE_ID },
+        body: JSON.stringify(p),
+      })
+    ).json().catch(() => null);
+    if (created?.id) seededProductIds.push(created.id);
   }
   return user;
+}
+
+async function unseed() {
+  const ids = seededProductIds.splice(0);
+  for (const id of ids) {
+    // Permanent: a plain DELETE would park the row on the owner's Verwijderd page.
+    await fetch(`${API}/products/${id}/permanent`, { method: "DELETE" }).catch(() => {});
+  }
+  console.log(`removed ${ids.length} seeded product(s)`);
 }
 
 const ROUTES = [
@@ -169,6 +186,7 @@ const VIEWPORTS = [
   }
 
   await browser.close();
+  await unseed();
   await fs.writeFile(`${OUT}/report.json`, JSON.stringify(report, null, 2));
   for (const row of report) {
     const flag = row.errors?.length ? `ERRORS(${row.errors.length})` : "ok";

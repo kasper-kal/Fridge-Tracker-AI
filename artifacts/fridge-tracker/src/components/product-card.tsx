@@ -10,6 +10,8 @@ import { haptic } from "@/lib/haptics";
 import { signalTourAction } from "@/components/tour";
 
 const SWIPE_THRESHOLD = 60;
+// An open card only has to travel this far back to the right before it closes.
+const CLOSE_THRESHOLD = 24;
 
 function formatDate(iso: string) {
   try {
@@ -20,10 +22,11 @@ function formatDate(iso: string) {
 type Location = LocalProduct["storageLocation"];
 
 function moveTargets(loc: Location): { dest: Location; label: string; Icon: React.ElementType; bg: string }[] {
+  // Koelkast, Voorraad, Vriezer: the order the tabs and the count tiles use.
   const all = [
     { dest: "fridge"  as Location, label: "Koelkast", Icon: Refrigerator, bg: "bg-sky-500" },
-    { dest: "freezer" as Location, label: "Vriezer",  Icon: Snowflake,    bg: "bg-indigo-500" },
     { dest: "pantry"  as Location, label: "Voorraad", Icon: Package,      bg: "bg-amber-500" },
+    { dest: "freezer" as Location, label: "Vriezer",  Icon: Snowflake,    bg: "bg-indigo-500" },
   ];
   return all.filter(t => t.dest !== loc);
 }
@@ -45,9 +48,12 @@ export function ProductCard({ product }: { product: LocalProduct }) {
   const startOffset = useRef(0);
   const pointerId   = useRef<number | null>(null);
   const dragging    = useRef(false);
-  // A drag always ends in a click on the card underneath; without this guard
-  // releasing a swipe would also open the edit form.
-  const ignoreClick = useRef(false);
+  const dragDx      = useRef(0);
+  // A drag can end in a click on whatever is underneath it, so clicks are
+  // swallowed for a moment after a drag. This is a short window, not a latch: a
+  // drag that ends without any click (the usual case on a phone) used to leave
+  // the latch set and eat the next real tap, so the action tiles needed two taps.
+  const swallowClickUntil = useRef(0);
   const cardFaceRef = useRef<HTMLDivElement>(null);
   const [swipeReveal, setSwipeReveal] = useState(0);
 
@@ -136,6 +142,7 @@ export function ProductCard({ product }: { product: LocalProduct }) {
     startOffset.current = swiped ? -swipeReveal : 0;
     pointerId.current = e.pointerId;
     dragging.current = false;
+    dragDx.current = 0;
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -150,10 +157,11 @@ export function ProductCard({ product }: { product: LocalProduct }) {
       if (Math.abs(dy) > Math.abs(dx)) return;
       if (Math.abs(dx) < 8) return;
       dragging.current = true;
-      ignoreClick.current = true;
+      swallowClickUntil.current = Number.POSITIVE_INFINITY;
       e.currentTarget.setPointerCapture?.(e.pointerId);
     }
 
+    dragDx.current = dx;
     const offset = Math.min(0, Math.max(-swipeReveal, startOffset.current + dx));
     setSwipeOffset(offset);
   };
@@ -165,21 +173,27 @@ export function ProductCard({ product }: { product: LocalProduct }) {
     pointerId.current = null;
     if (!dragging.current) return;
     dragging.current = false;
+    swallowClickUntil.current = Date.now() + 300;
 
-    if (swipeOffset < -SWIPE_THRESHOLD) {
-      if (!swiped) revealActions();
+    // Closing is deliberately much easier than opening: an open card needs
+    // only a short pull to the right (or most of the way home), never the
+    // full card width it would otherwise take to get past SWIPE_THRESHOLD.
+    const pulledRight = dragDx.current > CLOSE_THRESHOLD;
+    const nearHome = swipeOffset > -SWIPE_THRESHOLD;
+
+    if (swiped) {
+      if (pulledRight || nearHome) closeSwipe();
       else setSwipeOffset(-swipeReveal);
-    } else if (swiped) {
-      setSwiped(false);
+    } else if (nearHome) {
       setSwipeOffset(0);
     } else {
-      setSwipeOffset(0);
+      revealActions();
     }
   };
 
   const swallowDragClick = (e: React.MouseEvent) => {
-    if (!ignoreClick.current) return;
-    ignoreClick.current = false;
+    if (Date.now() >= swallowClickUntil.current) return;
+    swallowClickUntil.current = 0;
     e.preventDefault();
     e.stopPropagation();
   };

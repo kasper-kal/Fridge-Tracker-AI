@@ -13,6 +13,13 @@ import {
 
 const app: Express = express();
 
+// These responses are live lists: adding or deleting a product changes them at
+// once. Express' ETag handling answered a repeated request with "304 Not
+// Modified" and an empty body, which the app could only read as a failed
+// request - that is how the Verwijderd page came back empty even though the
+// database held deleted products.
+app.disable("etag");
+
 app.use(
   pinoHttp({
     logger,
@@ -45,6 +52,10 @@ app.use(
   })),
 );
 
+app.use("/api", (_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use("/api", router);
 
 export default app;

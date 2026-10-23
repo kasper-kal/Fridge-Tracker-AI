@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useCallback } from "react";
+import { ReactNode, useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { BottomNav } from "./bottom-nav";
 import { Sidebar } from "./sidebar";
@@ -28,6 +28,15 @@ export function Layout({ children, onRefresh }: LayoutProps) {
   const gestureStartX = useRef<number | null>(null);
   const gestureStartY = useRef<number | null>(null);
   const gestureType = useRef<"nav-left" | "nav-right" | "add-modal" | null>(null);
+
+  // A new page starts at its top. On a phone the document itself scrolls - the
+  // shell is min-h, so a long page grows past the viewport - while the scroll
+  // area inside it scrolls on desktop, so both are reset. Without this, opening
+  // Gebruiksvoorwaarden from the bottom of Account showed section 2.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  }, [location]);
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -119,6 +128,7 @@ export function Layout({ children, onRefresh }: LayoutProps) {
   );
 
   const showIndicator = pullY > 8 || refreshing;
+  const pullPadding = showIndicator ? (refreshing ? PULL_THRESHOLD : pullY) : 0;
 
   return (
     <div className="app-shell min-h-[100dvh] lg:h-[100dvh] bg-background relative flex flex-col lg:flex-row overflow-hidden">
@@ -128,8 +138,8 @@ export function Layout({ children, onRefresh }: LayoutProps) {
       <div className="relative flex min-w-0 flex-1 flex-col">
       {onRefresh && showIndicator && (
         <div
-          className="absolute top-0 left-0 right-0 flex justify-center items-end z-30 pointer-events-none"
-          style={{ height: refreshing ? PULL_THRESHOLD : pullY }}
+          className="absolute left-0 right-0 flex justify-center items-end z-30 pointer-events-none"
+          style={{ top: 0, height: refreshing ? PULL_THRESHOLD : pullY }}
         >
           <div className="pb-2">
             <RefreshCw
@@ -150,7 +160,8 @@ export function Layout({ children, onRefresh }: LayoutProps) {
         ref={mainRef}
         className="flex-1 pb-24 lg:pb-12 overflow-y-auto custom-scrollbar"
         style={{
-          paddingTop: showIndicator ? (refreshing ? PULL_THRESHOLD : pullY) : 0,
+          // Nothing sits above the page, so its heading starts at the top edge.
+          paddingTop: `${pullPadding}px`,
           transition:
             pullY === 0 ? "padding-top 0.3s cubic-bezier(0.4,0,0.2,1)" : "none",
         }}

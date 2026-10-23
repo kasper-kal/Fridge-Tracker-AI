@@ -15,6 +15,7 @@ export interface LocalProduct {
   unit: string;
   storageLocation: "fridge" | "freezer" | "pantry";
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 interface CreateInput {
@@ -46,6 +47,13 @@ interface ProductsContextValue {
   createProduct: (data: CreateInput) => Promise<number>;
   updateProduct: (id: number, data: UpdateInput) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
+  /** Products deleted on this list, newest deletion first. */
+  deletedProducts: LocalProduct[];
+  isLoadingDeleted: boolean;
+  refetchDeleted: () => Promise<void>;
+  restoreProduct: (id: number) => Promise<void>;
+  /** Remove a deleted product for good, skipping the list it sits on. */
+  purgeProduct: (id: number) => Promise<void>;
 }
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
@@ -86,6 +94,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const [products, setProductsRaw] = useState<LocalProduct[]>(() => readStorage(key));
   const [isLoading, setIsLoading] = useState(true);
+  const [deletedProducts, setDeletedProducts] = useState<LocalProduct[]>([]);
+  const [isLoadingDeleted, setIsLoadingDeleted] = useState(true);
 
   const past   = useRef<LocalProduct[][]>([]);
   const future = useRef<LocalProduct[][]>([]);
@@ -173,12 +183,35 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, [householdId, applyServerData]);
 
+  // The Verwijderd page reads its own list from the server: a deleted product is
+  // gone from the active list, so it cannot live in the same array.
+  const refetchDeleted = useCallback((): Promise<void> => {
+    return apiFetch("/api/products/deleted", householdId)
+      .then((data: LocalProduct[]) => {
+        if (Array.isArray(data)) setDeletedProducts(data);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingDeleted(false));
+  }, [householdId]);
+
+  const restoreProduct = useCallback(async (id: number) => {
+    await apiFetch(`/api/products/${id}/restore`, householdId, { method: "POST" }).catch(() => null);
+    await Promise.all([refetch(), refetchDeleted()]);
+  }, [householdId, refetch, refetchDeleted]);
+
+  const purgeProduct = useCallback(async (id: number) => {
+    await apiFetch(`/api/products/${id}/permanent`, householdId, { method: "DELETE" }).catch(() => null);
+    await refetchDeleted();
+  }, [householdId, refetchDeleted]);
+
   useEffect(() => {
     setIsLoading(true);
+    setIsLoadingDeleted(true);
     syncFromServer(true);
+    refetchDeleted();
     const interval = setInterval(() => syncFromServer(false), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [syncFromServer]);
+  }, [syncFromServer, refetchDeleted]);
 
   const createProduct = useCallback(async (data: CreateInput) => {
     const tempId = -Date.now();
@@ -209,8 +242,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const deleteProduct = useCallback(async (id: number) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
-    if (id > 0) apiFetch(`/api/products/${id}`, householdId, { method: "DELETE" }).catch(() => {});
-  }, [setProducts, householdId]);
+    if (id < 0) return;
+    try {
+      await apiFetch(`/api/products/${id}`, householdId, { method: "DELETE" });
+      // The product only exists on the Verwijderd list from now on, so that
+      // list has to be reloaded or the thing you just deleted never appears.
+      await refetchDeleted();
+    } catch {}
+  }, [setProducts, householdId, refetchDeleted]);
 
   const fridgeProducts  = products.filter((p) => p.storageLocation === "fridge");
   const freezerProducts = products.filter((p) => p.storageLocation === "freezer");
@@ -227,6 +266,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       products, isLoading, fridgeProducts, freezerProducts, pantryProducts, summary,
       canUndo, canRedo, undo, redo, refetch,
       createProduct, updateProduct, deleteProduct,
+      deletedProducts, isLoadingDeleted, refetchDeleted, restoreProduct, purgeProduct,
     }}>
       {children}
     </ProductsContext.Provider>

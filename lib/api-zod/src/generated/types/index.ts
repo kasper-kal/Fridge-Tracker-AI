@@ -7,6 +7,7 @@
  */
 
 export * from './adminStatus';
+export * from './deleteUser200';
 export * from './healthStatus';
 export * from './listProductsLocation';
 export * from './listProductsParams';

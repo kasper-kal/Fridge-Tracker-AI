@@ -12,4 +12,5 @@ export type ProductUpdateStorageLocation = typeof ProductUpdateStorageLocation[k
 export const ProductUpdateStorageLocation = {
   fridge: 'fridge',
   freezer: 'freezer',
+  pantry: 'pantry',
 } as const;

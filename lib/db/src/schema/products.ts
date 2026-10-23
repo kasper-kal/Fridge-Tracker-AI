@@ -10,6 +10,9 @@ export const productsTable = pgTable("products", {
   storageLocation: text("storage_location").notNull(),
   householdId: integer("household_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Deleting sets this instead of removing the row, so the product can be found
+  // again on the Verwijderd page.
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });
